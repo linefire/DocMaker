@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.3'
+__version__ = '0.4'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -94,19 +94,19 @@ class DocMaker:
 
     Methods
     -------
-    parse()
+    parse(method: int, input_path: str, output_path: str = '')
         Клас метод - вхідна точка роботи класу.
         Робить обробку файлів з вхідної інформації.
-    _parse_file()
+    _parse_file(path_to_file: str)
         Обробка файлу
-    _parse_dir()
+    _parse_dir(path_to_dir: str)
         Пошук файлів з вхідного каталогу.
-    _parse_recursive()
+    _parse_recursive(path_to_dir: str)
         Рекурсивний пошук файлів з 
         вхідного каталогу та його підкаталогів.
-    _parse_git()
+    _parse_git(path_to_git: str)
         Пошук файлів з git репозиторія.
-    _write_doc()
+    _write_doc(path_to_dir: str)
         Запис документації у html форматі.
 
     """
@@ -131,11 +131,42 @@ class DocMaker:
             Шлях вхідної точки для збору інформацію.
         output_path : str = ''
             Шлях збереження документації.
+
+        Raises
+        ------
+        ValueError
+            Якщо method не вірно вказан
+        TypeError
+            Якщо method, input_path, output_path мають неправильний тип.
         
         """
 
-        # TODO 0.4 Обробка файлів з вхідної інформації
-        pass
+        # Перевірка правильності вхідних данних
+        try:
+            if not 0 <= method <= 3:
+                raise ValueError('method повинен бути в діапазоні [0, 3]')
+        except TypeError:
+            raise TypeError('method повинен бути типу int')
+
+        if type(input_path) != str:
+            raise TypeError('input_path повинен бути типу str')
+
+        if type(output_path) != str:
+            raise TypeError('output_path повинен бути типу str')
+        
+        # Передача інформації для подальшої обробки
+        doc_maker = cls()
+
+        if method == doc_maker.file:
+            doc_maker._parse_file(input_path)
+        elif method == doc_maker.file:
+            doc_maker._parse_dir(input_path)
+        elif method == doc_maker.file:
+            doc_maker._parse_recursive(input_path)
+        elif method == doc_maker.file:
+            doc_maker._parse_git(input_path)
+
+        doc_maker._write_doc(output_path)
 
     def _parse_file(self, path_to_file: str):
         """Обробляє файли
