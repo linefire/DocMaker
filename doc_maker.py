@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.5'
+__version__ = '0.5.0.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -150,9 +150,15 @@ class _TreeElement(ABC):
         """Абстрактний метод який вертає дітей цього елементу
         
         Так як наслідники цього класу мають різні типи дітей, вони по 
-        різному повинні визначатися. 
+        різному повинні визначатися.
+
+        Returns
+        -------
+        list_ : List['_TreeElements']
+            Список дітей цього об'єкту
 
         """
+
         pass
 
 
