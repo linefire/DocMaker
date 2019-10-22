@@ -31,20 +31,20 @@
     from doc_maker import DocMaker
 
     Якщо потрібно документовати файл:
-        DocMaker.parse(DocMaker.parse_file, "path\\\\to\\\\file")
+        DocMaker.parse(DocMaker.file, "path\\\\to\\\\file")
     Якщо потрібно документовати файли з каталогу:
-        DocMaker.parse(DocMaker.parse_dir, "path\\\\to\\\\file")
+        DocMaker.parse(DocMaker.dir, "path\\\\to\\\\file")
     Якщо потрібно документовати файли з каталогу та його підкаталогів:
-        DocMaker.parse(DocMaker.parse_recursive, "path\\\\to\\\\file")
+        DocMaker.parse(DocMaker.recursive, "path\\\\to\\\\file")
     Якщо потрібно документовати файли з git репозиторія:
-        DocMaker.parse(DocMaker.parse_git, "path\\\\to\\\\file")
+        DocMaker.parse(DocMaker.git, "path\\\\to\\\\file")
     
     Якщо потрібно зберегти документацію у окреме місце:
-        DocMaker.parse(DocMaker.parse_file, "path\\\\to\\\\file", "path\\\\to\\\\dir")
+        DocMaker.parse(DocMaker.file, "path\\\\to\\\\file", "path\\\\to\\\\dir")
 
 """
 
-__version__ = '0.2'
+__version__ = '0.3'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -83,13 +83,13 @@ class DocMaker:
     
     Attributes
     ----------
-    parse_file : int
+    file : int
         Парсинг інформації з одного файлу.
-    parse_dir : int
+    dir : int
         Парсинг інформації з файлів каталогу.
-    parse_recusive : int
+    recursive : int
         Парсинг інформації з файлів каталогу та його підкаталогів.
-    parse_git : int
+    git : int
         Парсинг інформації з файлів git репозиторія.
 
     Methods
@@ -111,10 +111,10 @@ class DocMaker:
 
     """
 
-    parse_file: int = 0
-    parse_dir: int = 1
-    parse_recusive: int = 2
-    parse_git: int = 3
+    file: int = 0
+    dir: int = 1
+    recursive: int = 2
+    git: int = 3
 
     @classmethod
     def parse(cls, method: int, input_path: str, output_path: str = ''):
@@ -266,10 +266,19 @@ if __name__ == "__main__":
         '-o',
         '--output',
         metavar='PATH',
+        default='',
         help=('НЕОБОВ\'ЯЗКОВО '
               'Шлях до каталогу, де буде записано документацію.'
               'Якщо не вказано, документацію буде записано рядом з модулем'),
     )
 
     arguments = argument_parser.parse_args(argv[1:])
-    # TODO 0.3 продовжити роботу програми за вказаними аргументами
+    
+    if arguments.file:
+        DocMaker.parse(DocMaker.file, arguments.file, arguments.output)
+    elif arguments.dir:
+        DocMaker.parse(DocMaker.dir, arguments.dir, arguments.output)
+    elif arguments.recursive:
+        DocMaker.parse(DocMaker.recursive, arguments.recursive, arguments.output)
+    elif arguments.git:
+        DocMaker.parse(DocMaker.git, arguments.git, arguments.output)
