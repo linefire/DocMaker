@@ -44,11 +44,15 @@
 
 """
 
-__version__ = '0.4'
+__version__ = '0.5'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 from sys import argv
+from abc import ABC
+from abc import abstractmethod
+from typing import List
+from typing import Optional
 
 # TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
@@ -59,9 +63,99 @@ from sys import argv
 # TODO 5.0 Дизайн документації
 
 
-"""TODO 0.5 _TreeElement
-    Так як всі об'єкти будуть належати дереву об'єктів, треба зробити
-    базовий клас для всіх таких об'єктів"""
+class _TreeElement(ABC):
+    """Базовий клас для всіх об'єктів в дереві об'єктів
+    
+    Attributes
+    ----------
+    name : str
+        Ім'я яке буде відображено у дереві документації
+    path : str
+        Відносний шлях до об'єкту у документації
+    parent : Optional['_TreeElement']
+        Батько об'єкту
+
+    Methods
+    -------
+    get_tree_from_root()
+        Вертає дерево дітей у html форматі відносно кореневого елементу
+    get_tree()
+        Вертає дерево дітей у html форматі
+    get_childs()
+        Вертає список дітей цього об'єкту
+    
+    """
+
+    def __init__(self, name: str, path: str, 
+                 parent: Optional['_TreeElement'] = None):
+        """Конструктор класу _TreeElement
+
+        Parameters
+        ----------
+        name : str
+            Ім'я яке буде відображено у дереві документації
+        path : str
+            Відносний шлях до об'єкту у документації
+        parent : Optional['_TreeElement']
+            Батько об'єкту
+        
+        """
+
+        self.name: str = name
+        self.path: str = path
+        self.parent: Optional['_TreeElement'] = parent
+
+    def get_tree_from_root(self) -> str:
+        """Вертає дерево у html форматі відносно кореневого елементу
+
+        Метод знаходить корневий eлемент дерева, та вертає html
+        сторінку з метода get_tree.
+
+        Returns
+        -------
+        self.get_tree : str
+            Вертає дерево у вигляді html коду відносно корeневого 
+            елементу.
+        
+        """
+
+        if self.parent:
+            return self.parent.get_tree_from_root()
+        else:
+            return self.get_tree()
+
+    def get_tree(self) -> str:
+        """Вертає дерево своїх дітей у html форматі
+
+        Метод рекурсивно вертає дерево змісту у html форматі.
+
+        Returns
+        -------
+        html : str
+            Вертає html код дерева змісту себе та своїх дітей.
+        
+        """
+
+        html = '<li>{}</li>'.format(self.name)
+        childs = self.get_childs()
+        if childs:
+            html += '<ul>'
+            for child in childs:
+                html += child.get_tree()
+            html += '</ul>'
+        return html
+
+    @abstractmethod
+    def get_childs(self) -> List['_TreeElements']:
+        """Абстрактний метод який вертає дітей цього елементу
+        
+        Так як наслідники цього класу мають різні типи дітей, вони по 
+        різному повинні визначатися. 
+
+        """
+        pass
+
+
 """TODO 0.5.1 _Class(_TreeElement)
     Клас який описує класи Kotlin"""
 """TODO 0.5.2 _File(_Class)
@@ -75,7 +169,6 @@ from sys import argv
 """TODO >0.5.4 
     інші класи які описують методи класів Kotlin
     такі як interface тощо."""
-
 
 
 class DocMaker:
