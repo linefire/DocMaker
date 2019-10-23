@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.5.1'
+__version__ = '0.5.2'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -236,8 +236,64 @@ class _Var(_TreeElement):
         return html
 
 
-"""TODO 0.5.2 _Fun(_TreeElement) 
-    Клас який описує методи класів Kotlin"""
+class _Fun(_TreeElement):
+    """Клас який описує методи класів Kotlin
+    
+    Attributes
+    ----------
+    name : str
+        Ім'я методу
+    doc : str
+        Опис методу
+
+    Methods
+    -------
+    get_childs()
+        Вертає список дітей цього об'єкту
+    get_content()
+        Вертає інформацію методу у html вигляді
+    
+    """
+
+    def __init__(self, name: str, doc: str = 'Опис відсутній'):
+        """
+        
+        Parameters
+        ----------
+        name : str
+            ім'я методу
+        doc : str = 'Опис відсутній'
+            Опис методу
+
+        """
+
+        self.name: str = name
+        self.doc: str = doc
+
+    def get_childs(self) -> List['_TreeElements']:
+        """Метод який вертає дітеї цього об'єкту
+        
+        У цього об'єкту не може бути дітей, тому він вертає пустий 
+        список.
+        
+        """
+
+        return []
+
+    def get_content(self) -> str:
+        """Метод який вертає інформацію методу у html вигляді
+        
+        Returns
+        -------
+        html : str
+            Інформація методу у html вигляді
+        
+        """
+        html = ('<p>{doc}</p>'
+                '<p>{name}</p>')
+        return html
+
+
 """TODO x.x 
     інші класи які описують методи класів Kotlin
     такі як interface тощо. добавлю якщо побачу їх при тестуванні 
