@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.5.3'
+__version__ = '0.5.4'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -360,10 +360,62 @@ class _Class(_TreeElement):
         return ''
     
 
-"""TODO >0.5.4 _File(_Class)
-    Клас який доповнює _Class тому що, файл містить в собі все те 
-    що містить простий клас Kotlin але він не може містити в собі:
-    імпорти, інформацію пакету, та ім'я файлу."""
+class _File(_Class):
+    """Клас який описує файли Kotlin
+
+    Attributes
+    ----------
+    vars : List['_Var']
+        Список змінних класу
+    funcs : List['_Fun']
+        Список методів класу
+    classes : List['_Class']
+        Список класів класу
+
+    Methods
+    -------
+    get_childs()
+        Вертає список дітей цього об'єкту
+    get_content()
+        Вертає інформацію класу у html вигляді
+
+    """
+
+    def __init__(self, data: str):
+        """
+        
+        Parameters
+        ----------
+        data : str
+            Строка в який передається інформація тільки файлу.
+        
+        """
+        self.package = ''
+        # TODO >0.6 обробка інформації з змінної data
+
+    def get_childs(self) -> List['_TreeElements']:
+        """Метод який вертає дітеї цього об'єкту
+        
+        Returns
+        -------
+        : List['_TreeElements']
+            Вертає дітей цього об'єкту
+        
+        """
+
+        return super().get_childs()
+
+    def get_content(self) -> str:
+        """Метод який вертає інформацію файлу у html вигляді
+        
+        Returns
+        -------
+        html : str
+            Інформація методу у html вигляді
+        
+        """
+        # TODO >0.6 Генерування html коду
+        return ''
 
 
 class DocMaker:
