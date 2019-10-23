@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.5.0.2'
+__version__ = '0.5.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -178,8 +178,64 @@ class _TreeElement(ABC):
         pass
 
 
-"""TODO 0.5.1 _Var(_TreeElement)
-    Клас який описує змінні класів Kotlin"""
+class _Var(_TreeElement):
+    """Клас який описує змінні класів Kotlin
+    
+    Attributes
+    ----------
+    name : str
+        Ім'я змінної
+    doc : str
+        Опис змінної
+
+    Methods
+    -------
+    get_childs()
+        Вертає список дітей цього об'єкту
+    get_content()
+        Вертає інформацію змінної у html вигляді
+    
+    """
+
+    def __init__(self, name: str, doc: str = 'Опис відсутній'):
+        """
+        
+        Parameters
+        ----------
+        name : str
+            ім'я змінної
+        doc : str = 'Опис відсутній'
+            Опис змінної
+
+        """
+
+        self.name: str = name
+        self.doc: str = doc
+
+    def get_childs(self) -> List['_TreeElements']:
+        """Метод який вертає дітеї цього об'єкту
+        
+        У цього об'єкту не може бути дітей, тому він вертає пустий 
+        список.
+        
+        """
+
+        return []
+
+    def get_content(self) -> str:
+        """Метод який вертає інформацію змінної у html вигляді
+        
+        Returns
+        -------
+        html : str
+            Інформація змінної у html вигляді
+        
+        """
+        html = ('<p>{doc}</p>'
+                '<p>{name}</p>')
+        return html
+
+
 """TODO 0.5.2 _Fun(_TreeElement) 
     Клас який описує методи класів Kotlin"""
 """TODO x.x 
@@ -192,7 +248,6 @@ class _TreeElement(ABC):
     Клас який доповнює _Class тому що, файл містить в собі все те 
     що містить простий клас Kotlin але він не може містити в собі:
     імпорти, інформацію пакету, та ім'я файлу."""
-
 
 
 class DocMaker:
