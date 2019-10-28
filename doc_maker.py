@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.6'
+__version__ = '0.6.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -55,6 +55,8 @@ from typing import List
 from typing import Optional
 from os.path import exists
 from os.path import basename
+from re import search
+from re import findall
 
 # TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
@@ -395,13 +397,19 @@ class _File(_Class):
         ----------
         data : str
             Строка в який передається інформація тільки файлу.
+        name : str
+            Ім'я файлу
+        path : str
+            Шлях до файлу у документації
+        parent : _TreeElement
+            Батько об'єкту
         
         """
 
         super().__init__(data, name, path, parent)
 
-        self.package = ''
-        # TODO >0.6 обробка інформації з змінної data
+        self.package = self._get_package(data)
+        self.imports = self._get_imports(data)
 
     def get_childs(self) -> List['_TreeElements']:
         """Метод який вертає дітеї цього об'єкту
@@ -427,6 +435,17 @@ class _File(_Class):
         # TODO >0.6 Генерування html коду
         return ''
 
+    @staticmethod
+    def _get_package(data: str) -> str:
+        """Метод аналізує данні та знаходить пакет файлу."""
+        package = search(r'(?<=^package).+', data).group(0).strip()
+        return package
+
+    @staticmethod
+    def _get_imports(data: str) -> List[str]:
+        """Метод аналізує данні та віддає список імпортів файлу."""
+        imports = [i.strip() for i in findall(r'(?<=import).+', data)]
+        return imports
 
 class DocMaker:
     """Головний клас модуля який опрацьовує та генерує документацію.
