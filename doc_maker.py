@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.5.4'
+__version__ = '0.6'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -53,6 +53,8 @@ from abc import ABC
 from abc import abstractmethod
 from typing import List
 from typing import Optional
+from os.path import exists
+from os.path import basename
 
 # TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
@@ -321,7 +323,8 @@ class _Class(_TreeElement):
 
     """
 
-    def __init__(self, data: str):
+    def __init__(self, data: str, name: str, path: str, 
+                 parent: Optional[_TreeElement] = None):
         """
         
         Parameters
@@ -330,6 +333,9 @@ class _Class(_TreeElement):
             Строка в який передається інформація тільки класу.
         
         """
+
+        super().__init__(name, path, parent)
+
         self.vars: List['_Var'] = []
         self.funcs: List['_Fun'] = []
         self.classes: List['_Class'] = []
@@ -381,7 +387,8 @@ class _File(_Class):
 
     """
 
-    def __init__(self, data: str):
+    def __init__(self, data: str, name: str, path: str,
+                 parent: Optional[_TreeElement] = None):
         """
         
         Parameters
@@ -390,6 +397,9 @@ class _File(_Class):
             Строка в який передається інформація тільки файлу.
         
         """
+
+        super().__init__(data, name, path, parent)
+
         self.package = ''
         # TODO >0.6 обробка інформації з змінної data
 
@@ -456,6 +466,9 @@ class DocMaker:
     recursive: int = 2
     git: int = 3
 
+    def __init__(self):
+        self._root_element: Optional['_TreeElement'] = None
+
     @classmethod
     def parse(cls, method: int, input_path: str, output_path: str = ''):
         """Обробка вхідної інформації
@@ -517,11 +530,32 @@ class DocMaker:
         ----------
         path_to_dir : str
             Шлях до вхідного каталогу.
+
+        Raises
+        ------
+        TypeError
+            Файл не належить до язика програмування Kotlin
+        FileNotFoundError
+            Файл не знайдено
         
         """
 
-        # TODO 0.6 Обробка файлу
-        pass
+        # Перевірка правильності шляху
+        if path_to_file.split('.')[-1] != 'kt':
+            raise TypeError('Файл не належить до '
+                            'язика програмування Kotlin')
+
+        if not exists(path_to_file):
+            raise FileNotFoundError('Файл "{}" не'
+                                    'знайдено.'.format(path_to_file))
+
+        with open(path_to_file, 'r', encoding='utf-8') as file:
+            self._root_element = _File(file.read(), 
+                                       basename(path_to_file),
+                                       basename(path_to_file),
+                                       None,
+            )
+
 
     def _parse_dir(self, path_to_dir: str):
         """Пошук файлів з каталогу
