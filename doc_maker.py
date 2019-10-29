@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.6.1'
+__version__ = '0.6.2'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -53,10 +53,12 @@ from abc import ABC
 from abc import abstractmethod
 from typing import List
 from typing import Optional
+from os.path import join
 from os.path import exists
 from os.path import basename
 from re import search
 from re import findall
+from re import compile as re_compile
 
 # TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
@@ -315,6 +317,8 @@ class _Class(_TreeElement):
         Список методів класу
     classes : List['_Class']
         Список класів класу
+    objects_pattern : re.Pattern
+        Шаблон за яким знаходить об'єкти в коді
 
     Methods
     -------
@@ -322,17 +326,42 @@ class _Class(_TreeElement):
         Вертає список дітей цього об'єкту
     get_content()
         Вертає інформацію класу у html вигляді
+    _get_objects(data):
+        Метод знаходить об'єкти в коді
 
     """
 
+    objects_pattern = re_compile(
+        r'(\/\*[\s\S]*?\*\/|)'  # G1 Опис класу або нічого
+        r'(\s+)'                # G2 Пробіл або нічого
+        r'(\w+|)'               # G3 Тип класу або нічого
+        r'(\s+)'                # G4 Пробіл або нічого
+        r'(class)'              # G5 Слово class
+        r'(\s+)'                # G6 Пробіл або нічого
+        r'(\w+)'                # G7 Ім'я класу
+        r'(\s+)'                # G8 Пробіл або нічого
+        r'(\:|)'                # G9 Роздільник або нічого
+        r'(\s+)'                # G10 Пробіл або нічого
+        r'(\w+\(.*?\)|)'        # G11 Ім'я класу родителя або нічого
+        r'(\s+)'                # G12 Пробіл або нічого
+        r'(\{)'                 # G13 Відкриваюча скобка тіла класу
+    )
+
     def __init__(self, data: str, name: str, path: str, 
-                 parent: Optional[_TreeElement] = None):
+                 parent: Optional[_TreeElement] = None,
+                 doc: Optional[str] = None):
         """
         
         Parameters
         ----------
         data : str
             Строка в який передається інформація тільки класу.
+        name : str
+            Ім'я класу
+        path : str
+            Шлях до файлу у документації
+        doc : str
+            Опис класу
         
         """
 
@@ -341,8 +370,63 @@ class _Class(_TreeElement):
         self.vars: List['_Var'] = []
         self.funcs: List['_Fun'] = []
         self.classes: List['_Class'] = []
-        # TODO >0.6 обробка інформації з змінної data
 
+        self._get_objects(data)
+
+    def _get_objects(self, data: str):
+        """Метод знаходить об'єкти в коді
+
+        Метод шукає в коді об'єкти за регулярним вираженням
+        Коли знаходить, создає новий об'єкт за інформацією
+        Зтирає ділянок коду з цим об'єктом
+        Шукає заново новий об'єкт
+        Поки нічого не знайде
+
+        Parameters
+        ----------
+        data : str
+            Код
+        
+        """
+
+        # Каталог для цього об'єкту
+        doc_path = self.path.split('.')[0]
+
+        # Цикл який шукає об'єкти
+        while True:
+            # Знаходимо наступний об'єкт
+            object_ = search(self.objects_pattern, data)
+            # Якщо немає, виходимо з циклу
+            if object_ is None:
+                break
+            
+            # Позиція де починаєтся відкриваюча фігурна скоба класу
+            start_parentless = object_.start(13) 
+            distance_from_start = 0
+            count_parentless = 0
+            # Цикл який знаходить тіло класу, рахуючі фігурні скобки 
+            while True:
+                current_char = start_parentless + distance_from_start
+                if data[current_char] == '{':
+                    count_parentless += 1
+                if data[current_char] == '}':
+                    count_parentless -= 1
+                if count_parentless == 0:
+                    break
+                distance_from_start += 1
+
+            # Создаємо клас та добавляємо у список класів
+            class_ = _Class(
+                data[start_parentless:current_char], 
+                object_.group(7),
+                join(doc_path, object_.group(7) + '.html'),
+                self,
+            )
+            self.classes.append(class_)
+
+            # Зтираємо інформацію про цей клас
+            data = data[:object_.start()] + data[current_char:]
+            
     def get_childs(self) -> List['_TreeElements']:
         """Метод який вертає дітеї цього об'єкту
         
@@ -446,6 +530,7 @@ class _File(_Class):
         """Метод аналізує данні та віддає список імпортів файлу."""
         imports = [i.strip() for i in findall(r'(?<=import).+', data)]
         return imports
+
 
 class DocMaker:
     """Головний клас модуля який опрацьовує та генерує документацію.
@@ -568,10 +653,11 @@ class DocMaker:
             raise FileNotFoundError('Файл "{}" не'
                                     'знайдено.'.format(path_to_file))
 
+        doc_path = basename(path_to_file).split('.')[0] + '.html'
         with open(path_to_file, 'r', encoding='utf-8') as file:
             self._root_element = _File(file.read(), 
                                        basename(path_to_file),
-                                       basename(path_to_file),
+                                       doc_path,
                                        None,
             )
 
