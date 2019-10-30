@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.6.2'
+__version__ = '0.6.3'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -261,7 +261,9 @@ class _Fun(_TreeElement):
     
     """
 
-    def __init__(self, name: str, doc: str = 'Опис відсутній'):
+    def __init__(self, name: str, path: str, 
+                 parent: Optional[_TreeElement] = None,
+                 doc: str = None):
         """
         
         Parameters
@@ -273,7 +275,8 @@ class _Fun(_TreeElement):
 
         """
 
-        self.name: str = name
+        super().__init__(name, path, parent)
+
         self.doc: str = doc
 
     def get_childs(self) -> List['_TreeElements']:
@@ -333,18 +336,30 @@ class _Class(_TreeElement):
 
     objects_pattern = re_compile(
         r'(\/\*[\s\S]*?\*\/|)'  # G1 Опис класу або нічого
-        r'(\s+)'                # G2 Пробіл або нічого
+        r'(\s+|)'               # G2 Пробіл або нічого
         r'(\w+|)'               # G3 Тип класу або нічого
-        r'(\s+)'                # G4 Пробіл або нічого
+        r'(\s+|)'               # G4 Пробіл або нічого
         r'(class)'              # G5 Слово class
-        r'(\s+)'                # G6 Пробіл або нічого
+        r'(\s+|)'               # G6 Пробіл або нічого
         r'(\w+)'                # G7 Ім'я класу
-        r'(\s+)'                # G8 Пробіл або нічого
+        r'(\s+|)'               # G8 Пробіл або нічого
         r'(\:|)'                # G9 Роздільник або нічого
-        r'(\s+)'                # G10 Пробіл або нічого
+        r'(\s+|)'               # G10 Пробіл або нічого
         r'(\w+\(.*?\)|)'        # G11 Ім'я класу родителя або нічого
-        r'(\s+)'                # G12 Пробіл або нічого
+        r'(\s+|)'               # G12 Пробіл або нічого
         r'(\{)'                 # G13 Відкриваюча скобка тіла класу
+        r'|'                    # Далі йде патерн для функції
+        r'(\/\*[\s\S]*?\*\/|)'  # G14 Опис функції або нічого
+        r'(\s+|)'               # G15 Пробіл або нічого
+        r'(\w+|)'               # G16 Тип функції або нічого
+        r'(\s+|)'               # G17 Пробіл або нічого
+        r'(fun)'                # G18 Слово fun
+        r'(\s+|)'               # G19 Пробіл або нічого
+        r'(\w+)'                # G20 Ім'я функції
+        r'(\s+|)'               # G21 Пробіл або нічого
+        r'(\(.*?\))'            # G22 Параметри функції
+        r'(\s+|)'               # G23 Пробіл або нічого
+        r'(\{)'                 # G24 Відкриваюча скобка тіла класу
     )
 
     def __init__(self, data: str, name: str, path: str, 
@@ -360,6 +375,8 @@ class _Class(_TreeElement):
             Ім'я класу
         path : str
             Шлях до файлу у документації
+        parent : _TreeElement
+            Батько цього об'єкту
         doc : str
             Опис класу
         
@@ -400,32 +417,51 @@ class _Class(_TreeElement):
             if object_ is None:
                 break
             
-            # Позиція де починаєтся відкриваюча фігурна скоба класу
-            start_parentless = object_.start(13) 
-            distance_from_start = 0
-            count_parentless = 0
-            # Цикл який знаходить тіло класу, рахуючі фігурні скобки 
-            while True:
-                current_char = start_parentless + distance_from_start
-                if data[current_char] == '{':
-                    count_parentless += 1
-                if data[current_char] == '}':
-                    count_parentless -= 1
-                if count_parentless == 0:
-                    break
-                distance_from_start += 1
+            if object_.group(5):
+                # Позиції де починаєтся і закінчуєтся тіло класу
+                start_pos_parentless = object_.start(13)
+                end_pos_parentless = self._get_body(data, start_pos_parentless)
+                
+                # Создаємо клас та добавляємо у список класів
+                class_ = _Class(
+                    data[start_pos_parentless:end_pos_parentless], 
+                    object_.group(7),
+                    join(doc_path, object_.group(7) + '.html'),
+                    self,
+                )
+                self.classes.append(class_)
+            if object_.group(18):
+                # Позиції де починаєтся і закінчуєтся тіло функції
+                start_pos_parentless = object_.start(24)
+                end_pos_parentless = self._get_body(data, start_pos_parentless)
+                
+                # Создаємо клас та добавляємо у список класів
+                fun_ = _Fun( 
+                    object_.group(20),
+                    join(doc_path, object_.group(20) + '.html'),
+                    self,
+                )
+                self.funcs.append(fun_)
 
-            # Создаємо клас та добавляємо у список класів
-            class_ = _Class(
-                data[start_parentless:current_char], 
-                object_.group(7),
-                join(doc_path, object_.group(7) + '.html'),
-                self,
-            )
-            self.classes.append(class_)
+            # Зтираємо інформацію про цей об'єкт
+            data = data[:object_.start()] + data[end_pos_parentless:]
 
-            # Зтираємо інформацію про цей клас
-            data = data[:object_.start()] + data[current_char:]
+    @staticmethod
+    def _get_body(data: str, start_pos_parentless: int) -> int:
+        """Метод визначає тіло об'єкту рахуючи скобки"""
+        distance_from_start = 0
+        count_parentless = 0
+        # Цикл який знаходить тіло класу, рахуючі фігурні скобки 
+        while True:
+            current_char_pos = start_pos_parentless + distance_from_start
+            if data[current_char_pos] == '{':
+                count_parentless += 1
+            if data[current_char_pos] == '}':
+                count_parentless -= 1
+            if count_parentless == 0:
+                break
+            distance_from_start += 1
+        return current_char_pos
             
     def get_childs(self) -> List['_TreeElements']:
         """Метод який вертає дітеї цього об'єкту
