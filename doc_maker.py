@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.6.3'
+__version__ = '0.7'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -56,9 +56,12 @@ from typing import Optional
 from os.path import join
 from os.path import exists
 from os.path import basename
+from os import makedirs
 from re import search
 from re import findall
 from re import compile as re_compile
+from datetime import datetime
+from shutil import rmtree
 
 # TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
@@ -750,8 +753,6 @@ class DocMaker:
     def _write_doc(self, path_to_dir: str):
         """Генерує зібрану інформацію у HTML форматі.
         
-        
-
         Parameters
         ----------
         path_to_dir : str
@@ -759,8 +760,46 @@ class DocMaker:
         
         """
 
-        # TODO <1.0 Генерація документації
-        pass
+        # Перевірка на існування кінцевого каталогу, та предостереження юзера
+        if exists(path_to_dir):
+            while True:
+                print(('Такий каталог "{}" вже існує, якщо продовжити' 
+                      '- вся інформація в ньому буде знищена').format(path_to_dir))
+                command = input('Продовжити? [Y(продовжити)\\N(відмінити)]'
+                                ' - оберіть команду: ')
+                if command.lower() == 'y':
+                    break
+                elif command.lower() == 'n':
+                    exit()
+                else:
+                    print('Неправильна команда.')
+
+            # Якщо юзер продовжив роботу програми, видаляємо папку
+            rmtree(path_to_dir)  
+        
+        # Создаємо кінцеву папку в яку будемо зберігати документацію
+        makedirs(path_to_dir)  
+
+        page_template = open(join('source', 'page_template.html'), 'r', 
+                             encoding='utf-8').read()
+        
+        index_page = page_template.format(
+            page_content=(
+                '<p>{project_name}</p>'
+                '<p>{script_name}</p>'
+                '<p>{version}</p>'
+                '<p>{date}</p>'
+            ).format(
+                project_name=self._root_element.name,
+                script_name='DocMaker',
+                version=__version__,
+                date=datetime.now().strftime('%d.%m.%Y %H:%M'),
+            )
+        )
+
+        
+        with open(join(path_to_dir, 'index.html'), 'w', encoding='utf-8') as file:
+            file.write(index_page)
 
 
 if __name__ == "__main__":
