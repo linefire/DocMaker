@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7'
+__version__ = '0.7.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -56,6 +56,7 @@ from typing import Optional
 from os.path import join
 from os.path import exists
 from os.path import basename
+from os.path import dirname
 from os import makedirs
 from re import search
 from re import findall
@@ -301,8 +302,13 @@ class _Fun(_TreeElement):
             Інформація методу у html вигляді
         
         """
-        html = ('<p>{doc}</p>'
-                '<p>{name}</p>')
+        html = (
+            '<p>{doc}</p>'
+            '<p>{name}</p>'
+        ).format(
+            doc='',
+            name=self.name,
+        )
         return html
 
 
@@ -475,7 +481,7 @@ class _Class(_TreeElement):
             Вертає дітей цього об'єкту
         
         """
-
+        
         return self.classes + self.funcs + self.vars
 
     def get_content(self) -> str:
@@ -487,8 +493,21 @@ class _Class(_TreeElement):
             Інформація методу у html вигляді
         
         """
-        # TODO >0.6 Генерування html коду
-        return ''
+
+        html = ''
+        if type(self) is _Class:
+            html += (
+                '<p>{doc}</p>'
+                '<p>{name}</p>'
+            ).format(
+                doc='',
+                name=self.name,
+            )
+
+        for object_ in self.get_childs():
+            html += object_.get_content()
+
+        return html
     
 
 class _File(_Class):
@@ -555,8 +574,21 @@ class _File(_Class):
             Інформація методу у html вигляді
         
         """
-        # TODO >0.6 Генерування html коду
-        return ''
+
+        imports = ['<p>import {}</p>'.format(i) for i in self.imports]
+
+        html = (
+            '<p>{filename}</p>'
+            '<p>{package}</p>'
+            '<li>{imports}</li>'
+            '<div>{content}</div>'
+        ).format(
+            filename=self.name,
+            package=self.package,
+            imports=''.join(imports),
+            content=super().get_content(),
+        )
+        return html
 
     @staticmethod
     def _get_package(data: str) -> str:
@@ -798,8 +830,19 @@ class DocMaker:
         )
 
         
-        with open(join(path_to_dir, 'index.html'), 'w', encoding='utf-8') as file:
+        with open(join(path_to_dir, 'index.html'), 'w', 
+                  encoding='utf-8') as file:
             file.write(index_page)
+
+        for object_ in [self._root_element] + self._root_element.get_childs():
+
+            if type(object_) is _File:
+                makedirs(join(path_to_dir, dirname(object_.path)), 
+                         exist_ok=True)
+
+                with open(join(path_to_dir, object_.path), 'w', 
+                          encoding='utf-8') as file:
+                    file.write(object_.get_content())
 
 
 if __name__ == "__main__":
