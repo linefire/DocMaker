@@ -819,24 +819,16 @@ class DocMaker:
         page_template = open(join('source', 'page_template.html'), 'r', 
                              encoding='utf-8').read()
         
-        index_page = page_template.format(
-            page_content=(
-                '<p>{project_name}</p>'
-                '<p>{script_name}</p>'
-                '<p>{version}</p>'
-                '<p>{date}</p>'
-            ).format(
-                project_name=self._root_element.name,
-                script_name='DocMaker',
-                version=__version__,
-                date=datetime.now().strftime('%d.%m.%Y %H:%M'),
-            )
+        page_template = page_template.format(
+            project_name=self._root_element.name,
+            date=datetime.now().strftime('%d.%m.%Y %H:%M'),
+            version=__version__,
         )
 
         
         with open(join(path_to_dir, 'index.html'), 'w', 
                   encoding='utf-8') as file:
-            file.write(index_page)
+            file.write(page_template)
 
         for object_ in [self._root_element] + self._root_element.get_childs():
 
@@ -846,7 +838,11 @@ class DocMaker:
 
                 with open(join(path_to_dir, object_.path), 'w', 
                           encoding='utf-8') as file:
-                    file.write(object_.get_content())
+                    file.write(
+                        page_template.format(
+                            page_content=object_.get_content(),
+                        ) 
+                    )
 
 
 if __name__ == "__main__":
