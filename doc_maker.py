@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7.1'
+__version__ = '0.7.2'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -63,6 +63,7 @@ from re import findall
 from re import compile as re_compile
 from datetime import datetime
 from shutil import rmtree
+from shutil import copytree
 
 # TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
@@ -811,6 +812,9 @@ class DocMaker:
         
         # Создаємо кінцеву папку в яку будемо зберігати документацію
         makedirs(path_to_dir)  
+
+        copytree(join('source', 'css'), join(path_to_dir, 'css'))
+        copytree(join('source', 'js'), join(path_to_dir, 'js'))
 
         page_template = open(join('source', 'page_template.html'), 'r', 
                              encoding='utf-8').read()
