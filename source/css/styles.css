@@ -38,3 +38,13 @@ ul {
 .active {
     display: block;
 }
+
+li:target {
+    animation: target 1s ease-out;
+}
+
+@keyframes target {
+    from { background:#ffffff; }
+    50% { background:#1cd2ff; }
+    to { background:#ffffff; }
+}

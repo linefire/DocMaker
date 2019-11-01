@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7.5'
+__version__ = '0.7.6'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -303,12 +303,14 @@ class _Fun(_TreeElement):
             Інформація методу у html вигляді
         
         """
+
         html = (
             '<li>Опис функції {doc}</li>'
-            '<li>fun {name}</li>'
+            '<li id="{id}">fun {name}</li>'
         ).format(
             doc='',
             name=self.name,
+            id=self.path.split('#')[1],
         )
         return html
 
