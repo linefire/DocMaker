@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7.2'
+__version__ = '0.7.3'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -304,8 +304,8 @@ class _Fun(_TreeElement):
         
         """
         html = (
-            '<p>{doc}</p>'
-            '<p>{name}</p>'
+            '<li>Опис функції {doc}</li>'
+            '<li>fun {name}</li>'
         ).format(
             doc='',
             name=self.name,
@@ -495,18 +495,22 @@ class _Class(_TreeElement):
         
         """
 
-        html = ''
         if type(self) is _Class:
-            html += (
-                '<p>{doc}</p>'
-                '<p>{name}</p>'
+            html = (
+                '<p>Опис класу {doc}</p>'
+                '<li><span>class {name}</span>'
+                '<ul>{{class_childs}}</ul></li>'
             ).format(
                 doc='',
                 name=self.name,
             )
+        else:
+            html = '{class_childs}'
 
+        class_childs = ''
         for object_ in self.get_childs():
-            html += object_.get_content()
+            class_childs += object_.get_content()
+        html = html.format(class_childs=class_childs)
 
         return html
     
@@ -576,14 +580,12 @@ class _File(_Class):
         
         """
 
-        imports = ['<p>import {}</p>'.format(i) for i in self.imports]
+        file_template = open(join('source', 'file_content_template.html'), 'r', 
+                             encoding='utf-8').read()
 
-        html = (
-            '<p>{filename}</p>'
-            '<p>{package}</p>'
-            '<li>{imports}</li>'
-            '<div>{content}</div>'
-        ).format(
+        imports = ['<li>import {}</li>'.format(i) for i in self.imports]
+
+        html = file_template.format(
             filename=self.name,
             package=self.package,
             imports=''.join(imports),
