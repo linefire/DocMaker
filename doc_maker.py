@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7.4'
+__version__ = '0.7.5'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -147,10 +147,10 @@ class _TreeElement(ABC):
         
         """
 
-        html = '<li><a href="{}">{}</a></li>'.format(self.path, self.name)
+        html = '<li class="caret"><a href="{}">{}</a></li>'.format(self.path, self.name)
         childs = self.get_childs()
         if childs:
-            html += '<ul>'
+            html += '<ul class="nested">'
             for child in childs:
                 html += child.get_tree()
             html += '</ul>'

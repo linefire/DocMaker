@@ -10,3 +10,31 @@ html, body {
 #page_content {
     background-color: #FAFAFA;
 }
+
+ul {
+    list-style-type: none;
+}
+
+.caret {
+    cursor: pointer;
+    user-select: none;
+}
+
+.caret::before {
+    content: "\25B6";
+    color: black;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.caret-down::before {
+    transform: rotate(90deg);
+}
+  
+.nested {
+    display: none;
+}
+  
+.active {
+    display: block;
+}
