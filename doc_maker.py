@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7.3'
+__version__ = '0.7.4'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -147,7 +147,7 @@ class _TreeElement(ABC):
         
         """
 
-        html = '<li>{}</li>'.format(self.name)
+        html = '<li><a href="{}">{}</a></li>'.format(self.path, self.name)
         childs = self.get_childs()
         if childs:
             html += '<ul>'
@@ -417,7 +417,9 @@ class _Class(_TreeElement):
         """
 
         # Каталог для цього об'єкту
-        doc_path = self.path.split('.')[0]
+        doc_path = self.path
+        if type(self) is _File:
+            doc_path += '#'
 
         # Цикл який шукає об'єкти
         while True:
@@ -436,7 +438,7 @@ class _Class(_TreeElement):
                 class_ = _Class(
                     data[start_pos_parentless:end_pos_parentless], 
                     object_.group(7),
-                    join(doc_path, object_.group(7) + '.html'),
+                    join(doc_path, object_.group(7)),
                     self,
                 )
                 self.classes.append(class_)
@@ -448,7 +450,7 @@ class _Class(_TreeElement):
                 # Создаємо клас та добавляємо у список класів
                 fun_ = _Fun( 
                     object_.group(20),
-                    join(doc_path, object_.group(20) + '.html'),
+                    join(doc_path, object_.group(20)),
                     self,
                 )
                 self.funcs.append(fun_)
@@ -496,13 +498,15 @@ class _Class(_TreeElement):
         """
 
         if type(self) is _Class:
+            id_ = self.path.split('#')[1]
             html = (
                 '<p>Опис класу {doc}</p>'
-                '<li><span>class {name}</span>'
+                '<li id="{id}"><span>class {name}</span>'
                 '<ul>{{class_childs}}</ul></li>'
             ).format(
                 doc='',
                 name=self.name,
+                id=id_,
             )
         else:
             html = '{class_childs}'
@@ -830,7 +834,10 @@ class DocMaker:
         
         with open(join(path_to_dir, 'index.html'), 'w', 
                   encoding='utf-8') as file:
-            file.write(page_template)
+            file.write(page_template.format(
+                page_content='',
+                tree=self._root_element.get_tree_from_root(),
+            ))
 
         for object_ in [self._root_element] + self._root_element.get_childs():
 
@@ -843,6 +850,7 @@ class DocMaker:
                     file.write(
                         page_template.format(
                             page_content=object_.get_content(),
+                            tree=self._root_element.get_tree_from_root(),
                         ) 
                     )
 
