@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.7.6'
+__version__ = '0.8'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -113,6 +113,7 @@ class _TreeElement(ABC):
         """
 
         self.name: str = name
+        self.doc: str = 'Опис відсутній'
         self.path: str = path
         self.parent: Optional['_TreeElement'] = parent
 
@@ -561,8 +562,10 @@ class _File(_Class):
 
         super().__init__(data, name, path, parent)
 
+
         self.package = self._get_package(data)
         self.imports = self._get_imports(data)
+        self.doc = self._get_doc(data)
 
     def get_childs(self) -> List['_TreeElements']:
         """Метод який вертає дітеї цього об'єкту
@@ -593,6 +596,7 @@ class _File(_Class):
 
         html = file_template.format(
             filename=self.name,
+            doc=self.doc,
             package=self.package,
             imports=''.join(imports),
             content=super().get_content(),
@@ -600,9 +604,19 @@ class _File(_Class):
         return html
 
     @staticmethod
+    def _get_doc(data: str) -> str:
+        doc = search(r'([\s]+|)\/\*[\s\S]*?\*\/', data)
+        if doc:
+            doc = doc.group(0).strip()
+        else:
+            doc = 'Опис відсутній'
+        doc = doc.replace('\n', '<br>')
+        return doc
+
+    @staticmethod
     def _get_package(data: str) -> str:
         """Метод аналізує данні та знаходить пакет файлу."""
-        package = search(r'(?<=^package).+', data).group(0).strip()
+        package = search(r'(?<=package).+', data).group(0).strip()
         return package
 
     @staticmethod
