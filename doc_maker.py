@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8.1'
+__version__ = '0.8.2'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -632,7 +632,7 @@ class _File(_Class):
 
     @staticmethod
     def _get_doc(data: str) -> str:
-        doc = search(r'([\s]+|)\/\*[\s\S]*?\*\/', data)
+        doc = search(r'^([\s]+|)\/\*[\s\S]*?\*\/', data)
         if doc:
             doc = doc.group(0).strip()
         else:
