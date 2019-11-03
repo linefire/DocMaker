@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8'
+__version__ = '0.8.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -189,6 +189,29 @@ class _TreeElement(ABC):
 
         pass
 
+    def get_alphabetical_index(self) -> str:
+        """Метод віддає список імен у документації в html вигляді"""
+
+        objects = self.get_all_childs()
+        objects = sorted(objects, key=lambda o: o.name)
+
+        html = ''
+        for object_ in objects:
+            if type(object_) is not _File:
+                html += '<li><a href="{path}">{name}</a></li>'.format(
+                    name=object_.name,
+                    path=object_.path,
+                )
+        return html
+
+    def get_all_childs(self) -> List['_TreeElement']:
+        """Метод віддає список дітей і себе"""
+
+        childs = []
+        for child_ in self.get_childs():
+            childs += child_.get_all_childs()
+        childs.append(self)
+        return childs
 
 class _Var(_TreeElement):
     """Клас який описує змінні класів Kotlin
@@ -857,6 +880,7 @@ class DocMaker:
             file.write(page_template.format(
                 page_content='',
                 tree=self._root_element.get_tree_from_root(),
+                alphabet=self._root_element.get_alphabetical_index(),
             ))
 
         for object_ in [self._root_element] + self._root_element.get_childs():
@@ -871,6 +895,7 @@ class DocMaker:
                         page_template.format(
                             page_content=object_.get_content(),
                             tree=self._root_element.get_tree_from_root(),
+                            alphabet=self._root_element.get_alphabetical_index(),
                         ) 
                     )
 
