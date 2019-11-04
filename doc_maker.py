@@ -134,29 +134,39 @@ class _TreeElement(ABC):
         else:
             self.level = level
 
-    def get_tree_from_root(self) -> str:
+    def get_tree_from_root(self, level: int = 0) -> str:
         """Вертає дерево у html форматі відносно кореневого елементу
 
         Метод знаходить корневий eлемент дерева, та вертає html
         сторінку з метода get_tree.
+
+        Parameters
+        ----------
+        level : int
+            Рівень вкладеності файлу у документації
 
         Returns
         -------
         self.get_tree : str
             Вертає дерево у вигляді html коду відносно корeневого 
             елементу.
-        
+
         """
 
         if self.parent:
-            return self.parent.get_tree_from_root()
+            return self.parent.get_tree_from_root(level)
         else:
-            return self.get_tree()
+            return self.get_tree(level)
 
-    def get_tree(self) -> str:
+    def get_tree(self, level: int = 0) -> str:
         """Вертає дерево своїх дітей у html форматі
 
         Метод рекурсивно вертає дерево змісту у html форматі.
+
+        Parameters
+        ----------
+        level : int = 0
+            Рівень вкладеності файлу у документації
 
         Returns
         -------
@@ -170,19 +180,19 @@ class _TreeElement(ABC):
             html = ('<li class="caret">'
                     '<a class="tree-item" href="{}{}">{}</a></li>'
                    ).format(
-                        '../' * self.level,
+                        '../' * level,
                         self.path, 
                         self.get_name_with_type(self),
                    )
             html += '<ul class="nested">'
             for child in childs:
-                html += child.get_tree()
+                html += child.get_tree(level)
             html += '</ul>'
         else:
             html = (
                 '<li><a class="tree-item" href="{}{}">{}</a></li>'
             ).format(
-                '../' * self.level,
+                '../' * level,
                 self.path, 
                 self.get_name_with_type(self),
             )
@@ -239,7 +249,7 @@ class _TreeElement(ABC):
             name = 'dir {}'.format(object_.name)
         return name
 
-    def get_alphabetical_index(self) -> str:
+    def get_alphabetical_index(self, level: int = 0) -> str:
         """Метод віддає список імен у документації в html вигляді"""
 
         objects = self.get_all_childs()
@@ -252,7 +262,7 @@ class _TreeElement(ABC):
                 html += ('<li><a class="tree-item" href="{level}{path}">'
                          '{name}</a></li>'
                 ).format(
-                    level='../' * self.level,
+                    level='../' * level,
                     name=name,
                     path=object_.path,
                 )
@@ -1064,7 +1074,7 @@ class DocMaker:
             file.write(page_template.format(
                 level='',
                 page_content='',
-                tree=self._root_element.get_tree_from_root(),
+                tree=self._root_element.get_tree_from_root(0),
                 alphabet=self._root_element.get_alphabetical_index(),
             ))
 
@@ -1080,8 +1090,8 @@ class DocMaker:
                         page_template.format(
                             level='../' * object_.level,
                             page_content=object_.get_content(),
-                            tree=self._root_element.get_tree_from_root(),
-                            alphabet=self._root_element.get_alphabetical_index(),
+                            tree=self._root_element.get_tree_from_root(object_.level),
+                            alphabet=self._root_element.get_alphabetical_index(object_.level),
                         ) 
                     )
 
