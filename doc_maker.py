@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8.5'
+__version__ = '0.8.5.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -200,7 +200,7 @@ class _TreeElement(ABC):
         html = ''
         for object_ in objects:
             if type(object_) is not _File:
-                html += '<li><a href="{path}">{name}</a></li>'.format(
+                html += '<li><a class="tree-item" href="{path}">{name}</a></li>'.format(
                     name=object_.name,
                     path=object_.path,
                 )
