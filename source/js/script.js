@@ -1,8 +1,13 @@
 var toggler = document.getElementsByClassName("caret");
 var i;
+var save_data = [];
 
 for (i = 0; i < toggler.length; i++) {
+    save_data.push(false);
   toggler[i].addEventListener("click", function() {
+    for (i = 0; i < toggler.length; i++) {
+        save_data[i] = toggler[i].classList.contains("caret-down");
+    }
     this.parentElement.querySelector(".nested").classList.toggle("active");
     this.classList.toggle("caret-down");
   });
@@ -20,9 +25,5 @@ if (saved_data != null) {
 }
 
 window.onbeforeunload = function(e) {
-    var save_data = [];
-    for (i = 0; i < this.toggler.length; i++) {
-        save_data.push(this.toggler[i].classList.contains("caret-down"));
-    }
-    window.localStorage.setItem("tree", this.JSON.stringify(save_data));
+    window.localStorage.setItem("tree", this.JSON.stringify(this.save_data));
 };

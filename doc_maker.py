@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '1.5'
+__version__ = '1.6'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
