@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.9'
+__version__ = '0.9.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -195,13 +195,23 @@ class _TreeElement(ABC):
         """Метод віддає список імен у документації в html вигляді"""
 
         objects = self.get_all_childs()
-        objects = sorted(objects, key=lambda o: o.name)
+        objects = sorted(objects, key=lambda o: o.name.lower())
 
         html = ''
         for object_ in objects:
+            if type(object_) is _Class:
+                name = 'class {}'.format(object_.name)
+            if type(object_) is _Fun:
+                name = 'fun {}'.format(object_.name)
+            if type(object_) is _Var:
+                if object_.fullname.__contains__(' var '):
+                    var_type = 'var'
+                else:
+                    var_type = 'val' 
+                name = '{} {}'.format(var_type, object_.name)
             if type(object_) is not _File:
                 html += '<li><a class="tree-item" href="{path}">{name}</a></li>'.format(
-                    name=object_.name,
+                    name=name,
                     path=object_.path,
                 )
         return html
@@ -929,7 +939,6 @@ class DocMaker:
 
         copytree(join('source', 'css'), join(path_to_dir, 'css'))
         copytree(join('source', 'js'), join(path_to_dir, 'js'))
-        copytree(join('source', 'imgs'), join(path_to_dir, 'imgs'))
 
         page_template = open(join('source', 'page_template.html'), 'r', 
                              encoding='utf-8').read()
