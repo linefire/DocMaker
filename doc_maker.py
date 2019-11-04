@@ -933,6 +933,12 @@ class DocMaker:
             Шлях де буде збережено документацію.
         
         """
+        
+        if not path_to_dir:
+            path_to_dir = 'documentions'
+
+        name = self._root_element.name.split('.')[0]
+        path_to_dir = join(path_to_dir, name)
 
         # Перевірка на існування кінцевого каталогу, та предостереження юзера
         if exists(path_to_dir):
