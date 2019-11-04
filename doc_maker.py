@@ -177,8 +177,8 @@ class _TreeElement(ABC):
  
         childs = self.get_childs()
         if childs:
-            html = ('<li class="caret">'
-                    '<a class="tree-item" href="{}{}">{}</a></li>'
+            html = ('<li>'
+                    '<span class="caret"><a class="tree-item" href="{}{}">{}</a></span>'
                    ).format(
                         '../' * level,
                         self.path, 
@@ -187,7 +187,7 @@ class _TreeElement(ABC):
             html += '<ul class="nested">'
             for child in childs:
                 html += child.get_tree(level)
-            html += '</ul>'
+            html += '</ul></li>'
         else:
             html = (
                 '<li><a class="tree-item" href="{}{}">{}</a></li>'
