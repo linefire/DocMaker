@@ -8,7 +8,7 @@
         <link rel="stylesheet" href="css/styles.css">
     </head>
     <body>
-        <nav class="navbar navbar-expand-sm bg-dark navbar-dark sticky-top">
+        <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
             <a class="navbar-brand" href="index.html">{project_name}</a>
             <span class="navbar-text">{date}</span>
             <div class="collapse navbar-collapse justify-content-end">
@@ -21,8 +21,8 @@
             <div class="row h-100" id="sidebar">
                 <div class="col-3 position-fixed sidebar h-100">
                     <div class="row h-50" id="tree">
-                        <div class="container">
-                            <h4>Дерево змісту</h4>
+                        <div class="container bg-light">
+                            <h4 class="sidebar-header">Дерево змісту</h4>
                             <ul class="overflow">
                                 {{tree}}
                             </ul>
@@ -30,15 +30,15 @@
                         </div>
                     </div>
                     <div class="row h-50" id="alphabet">
-                        <div class="container">
-                            <h4>Алфавітний показчик</h4>
+                        <div class="container bg-light">
+                            <h4 class="sidebar-header">Алфавітний показчик</h4>
                             <ul class="overflow">
                                 {{alphabet}}
                             </ul>
                         </div>
                     </div>
                 </div>
-                <div class="col offset-3 overflow h-100" id="page_content">
+                <div class="col offset-3 overflow h-100 bg-white" id="page_content">
                     {{page_content}}
                 </div>
             </div>

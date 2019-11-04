@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8.2'
+__version__ = '0.8.4'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -147,14 +147,16 @@ class _TreeElement(ABC):
             Вертає html код дерева змісту себе та своїх дітей.
         
         """
-
-        html = '<li class="caret"><a href="{}">{}</a></li>'.format(self.path, self.name)
+ 
         childs = self.get_childs()
         if childs:
+            html = '<li class="caret"><a href="{}" onclick="location.reload()">{}</a></li>'.format(self.path, self.name)
             html += '<ul class="nested">'
             for child in childs:
                 html += child.get_tree()
             html += '</ul>'
+        else:
+            html = '<li><a href="{}" onclick="location.reload()">{}</a></li>'.format(self.path, self.name)
         return html
 
     @abstractmethod

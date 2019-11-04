@@ -52,3 +52,7 @@ li:target {
     overflow: auto;
     padding-bottom: 100px;
 }
+
+.sidebar-header {
+    text-align: center;
+}
