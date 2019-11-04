@@ -1,7 +1,7 @@
 html, body {
     height: 100vh;
     background-color: #E0E0E0;
-    overflow: hidden;    
+    overflow: hidden;   
 }
 
 #page_content {
@@ -55,4 +55,8 @@ li:target {
 
 .sidebar-header {
     text-align: center;
+}
+
+#sidebar {
+    padding-top: 54px; 
 }

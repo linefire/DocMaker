@@ -150,13 +150,13 @@ class _TreeElement(ABC):
  
         childs = self.get_childs()
         if childs:
-            html = '<li class="caret"><a href="{}" onclick="location.reload()">{}</a></li>'.format(self.path, self.name)
+            html = '<li class="caret"><a href="{}">{}</a></li>'.format(self.path, self.name)
             html += '<ul class="nested">'
             for child in childs:
                 html += child.get_tree()
             html += '</ul>'
         else:
-            html = '<li><a href="{}" onclick="location.reload()">{}</a></li>'.format(self.path, self.name)
+            html = '<li><a href="{}">{}</a></li>'.format(self.path, self.name)
         return html
 
     @abstractmethod
