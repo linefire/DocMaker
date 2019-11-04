@@ -150,13 +150,23 @@ class _TreeElement(ABC):
  
         childs = self.get_childs()
         if childs:
-            html = '<li class="caret"><a class="tree-item" href="{}">{}</a></li>'.format(self.path, self.name)
+            html = ('<li class="caret">'
+                    '<a class="tree-item" href="{}">{}</a></li>'
+                   ).format(
+                        self.path, 
+                        self.get_name_with_type(self),
+                   )
             html += '<ul class="nested">'
             for child in childs:
                 html += child.get_tree()
             html += '</ul>'
         else:
-            html = '<li><a class="tree-item" href="{}">{}</a></li>'.format(self.path, self.name)
+            html = (
+                '<li><a class="tree-item" href="{}">{}</a></li>'
+            ).format(
+                self.path, 
+                self.get_name_with_type(self),
+            )
         return html
 
     @abstractmethod
@@ -191,6 +201,22 @@ class _TreeElement(ABC):
 
         pass
 
+    @staticmethod
+    def get_name_with_type(object_: '_TreeElement') -> str:
+        if type(object_) is _File:
+            name = 'file {}'.format(object_.name)
+        if type(object_) is _Class:
+            name = 'class {}'.format(object_.name)
+        if type(object_) is _Fun:
+            name = 'fun {}'.format(object_.name)
+        if type(object_) is _Var:
+            if object_.fullname.__contains__(' var '):
+                var_type = 'var'
+            else:
+                var_type = 'val' 
+            name = '{} {}'.format(var_type, object_.name)
+        return name
+
     def get_alphabetical_index(self) -> str:
         """Метод віддає список імен у документації в html вигляді"""
 
@@ -199,16 +225,7 @@ class _TreeElement(ABC):
 
         html = ''
         for object_ in objects:
-            if type(object_) is _Class:
-                name = 'class {}'.format(object_.name)
-            if type(object_) is _Fun:
-                name = 'fun {}'.format(object_.name)
-            if type(object_) is _Var:
-                if object_.fullname.__contains__(' var '):
-                    var_type = 'var'
-                else:
-                    var_type = 'val' 
-                name = '{} {}'.format(var_type, object_.name)
+            name = self.get_name_with_type(object_)
             if type(object_) is not _File:
                 html += '<li><a class="tree-item" href="{path}">{name}</a></li>'.format(
                     name=name,
