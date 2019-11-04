@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="js/jquery-3.4.1.slim.min.js"></script>
+        <script src="js/popper.min.js"></script>
+        <link rel="stylesheet" href="css/bootstrap.min.css">
+        <script src="js/bootstrap.min.js"></script>
+        <link rel="stylesheet" href="css/styles.css">
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-sm bg-dark navbar-dark fixed-top">
+            <a class="navbar-brand" href="index.html">{project_name}</a>
+            <span class="navbar-text">{date}</span>
+            <div class="collapse navbar-collapse justify-content-end">
+                <ul class="nav navbar-nav navbar-right">
+                    <span class="navbar-text">Згенеровано DocMaker {version}</span>
+                </ul>
+            </div>
+        </nav>
+        <div class="container-fluid h-100">
+            <div class="row h-100" id="sidebar">
+                <div class="col-3 position-fixed sidebar h-100">
+                    <div class="row h-50" id="tree">
+                        <div class="container bg-light overflow">
+                            <h4 class="sidebar-header">Дерево змісту</h4>
+                            <ul>
+                                {{tree}}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row h-50 bg-light" id="alphabet">
+                        <div class="col-12 h-100">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h4 class="sidebar-header">Алфавітний показчик</h4>
+                                </div>
+                            </div>
+                            <div class="row h-100">
+                                <div class="col-12 overflow">
+                                    <ul>
+                                        {{alphabet}}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col offset-3 overflow h-100 bg-white" id="page_content">
+                    {{page_content}}
+                </div>
+            </div>
+        </div>
+        <script src="js/script.js"></script>
+    </body>
+</html>
