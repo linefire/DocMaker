@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8.5.1'
+__version__ = '0.8.6'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -292,15 +292,19 @@ class _Fun(_TreeElement):
     
     """
 
-    def __init__(self, name: str, path: str, 
+    def __init__(self, name: str, path: str, fullname: str = '',
                  parent: Optional[_TreeElement] = None,
-                 doc: str = None):
+                 doc: str = 'Опис відсутній'):
         """
         
         Parameters
         ----------
         name : str
-            ім'я методу
+            Скорочене ім'я методу
+        fullname : str
+            Повне ім'я методу
+        parent : _TreeElement
+            Батько об'єкту
         doc : str = 'Опис відсутній'
             Опис методу
 
@@ -308,6 +312,7 @@ class _Fun(_TreeElement):
 
         super().__init__(name, path, parent)
 
+        self.fullname = fullname
         self.doc: str = doc
 
     def get_childs(self) -> List['_TreeElements']:
@@ -331,11 +336,11 @@ class _Fun(_TreeElement):
         """
 
         html = (
-            '<li>Опис функції {doc}</li>'
-            '<li id="{id}">fun {name}</li>'
+            '<li id="{id}"><span>{name}</span></li>'
+            '<ul>{doc}</ul><br>'
         ).format(
-            doc='',
-            name=self.name,
+            doc=self.doc,
+            name=self.fullname,
             id=self.path.split('#')[1],
         )
         return html
@@ -383,29 +388,30 @@ class _Class(_TreeElement):
         r'(\s+|)'               # G8 Пробіл або нічого
         r'(\:|)'                # G9 Роздільник або нічого
         r'(\s+|)'               # G10 Пробіл або нічого
-        r'(\w+\(.*?\)|)'        # G11 Ім'я класу родителя або нічого
-        r'(\s+|)'               # G12 Пробіл або нічого
-        r'(\{)'                 # G13 Відкриваюча скобка тіла класу
+        r'(\w+|)'               # G11 Ім'я класу родителя або нічого
+        r'(\(.*?\)|)'           # G12 Параметри класу родителя
+        r'(\s+|)'               # G13 Пробіл або нічого
+        r'(\{)'                 # G14 Відкриваюча скобка тіла класу
         r'|'                    # Далі йде патерн для функції
-        r'(\/\*[\s\S]*?\*\/|)'  # G14 Опис функції або нічого
-        r'(\s+|)'               # G15 Пробіл або нічого
-        r'(\w+|)'               # G16 Тип функції або нічого
-        r'( +|)'                # G17 Пробіл або нічого
-        r'(fun)'                # G18 Слово fun
-        r'(\s+|)'               # G19 Пробіл або нічого
-        r'(\w+)'                # G20 Ім'я функції
-        r'(\s+|)'               # G21 Пробіл або нічого
-        r'(\(.*?\))'            # G22 Параметри функції
-        r'(\s+|)'               # G23 Пробіл або нічого
-        r'(\:|)'                # G24 Роздільник або нічого
-        r'(\s+|)'               # G25 Пробіл або нічого
-        r'(\w+|)'               # G26 Тип значення що повертається
-        r'(\s+|)'               # G27 Пробіл або нічого
-        r'(\{)'                 # G28 Відкриваюча скобка тіла класу
+        r'(\/\*[\s\S]*?\*\/|)'  # G15 Опис функції або нічого
+        r'(\s+|)'               # G16 Пробіл або нічого
+        r'(\w+|)'               # G17 Тип функції або нічого
+        r'( +|)'                # G18 Пробіл або нічого
+        r'(fun)'                # G19 Слово fun
+        r'(\s+|)'               # G20 Пробіл або нічого
+        r'(\w+)'                # G21 Ім'я функції
+        r'(\s+|)'               # G22 Пробіл або нічого
+        r'(\(.*?\))'            # G23 Параметри функції
+        r'(\s+|)'               # G24 Пробіл або нічого
+        r'(\:|)'                # G25 Роздільник або нічого
+        r'(\s+|)'               # G26 Пробіл або нічого
+        r'(\w+|)'               # G27 Тип значення що повертається
+        r'(\s+|)'               # G28 Пробіл або нічого
+        r'(\{)'                 # G29 Відкриваюча скобка тіла класу
     )
 
-    def __init__(self, data: str, name: str, path: str, 
-                 parent: Optional[_TreeElement] = None,
+    def __init__(self, data: str, name: str, path: str, fullname: str = '', 
+                 parent: Optional[_TreeElement] = None, 
                  doc: Optional[str] = None):
         """
         
@@ -414,7 +420,9 @@ class _Class(_TreeElement):
         data : str
             Строка в який передається інформація тільки класу.
         name : str
-            Ім'я класу
+            Скорочене ім'я класу
+        fullname : str
+            Повне ім'я класу
         path : str
             Шлях до файлу у документації
         parent : _TreeElement
@@ -426,6 +434,7 @@ class _Class(_TreeElement):
 
         super().__init__(name, path, parent)
 
+        self.fullname = fullname
         self.vars: List['_Var'] = []
         self.funcs: List['_Fun'] = []
         self.classes: List['_Class'] = []
@@ -463,26 +472,37 @@ class _Class(_TreeElement):
             
             if object_.group(5):
                 # Позиції де починаєтся і закінчуєтся тіло класу
-                start_pos_parentless = object_.start(13)
+                start_pos_parentless = object_.start(14)
                 end_pos_parentless = self._get_body(data, start_pos_parentless)
                 
+                fullname = ' '.join([
+                    object_.group(3), object_.group(5), object_.group(7), 
+                    object_.group(9), object_.group(11) + object_.group(12),
+                ])
                 # Создаємо клас та добавляємо у список класів
                 class_ = _Class(
                     data[start_pos_parentless:end_pos_parentless], 
                     object_.group(7),
                     join(doc_path, object_.group(7)),
+                    fullname,
                     self,
                 )
                 self.classes.append(class_)
-            if object_.group(18):
+            if object_.group(19):
                 # Позиції де починаєтся і закінчуєтся тіло функції
-                start_pos_parentless = object_.start(28)
+                start_pos_parentless = object_.start(29)
                 end_pos_parentless = self._get_body(data, start_pos_parentless)
                 
+                fullname = ' '.join([
+                    object_.group(17), object_.group(19), 
+                    object_.group(21) + object_.group(23), 
+                    object_.group(25), object_.group(27),
+                ])
                 # Создаємо клас та добавляємо у список функцій
                 fun_ = _Fun( 
-                    object_.group(20),
-                    join(doc_path, object_.group(20)),
+                    object_.group(21),
+                    join(doc_path, object_.group(21)),
+                    fullname,
                     self,
                 )
                 self.funcs.append(fun_)
@@ -532,12 +552,11 @@ class _Class(_TreeElement):
         if type(self) is _Class:
             id_ = self.path.split('#')[1]
             html = (
-                '<p>Опис класу {doc}</p>'
-                '<li id="{id}"><span>class {name}</span>'
-                '<ul>{{class_childs}}</ul></li>'
+                '<li id="{id}"><span>{name}</span>'
+                '<ul><p>{doc}</p><br>{{class_childs}}</ul>'
             ).format(
-                doc='',
-                name=self.name,
+                doc=self.doc,
+                name=self.fullname,
                 id=id_,
             )
         else:
@@ -621,7 +640,7 @@ class _File(_Class):
         file_template = open(join('source', 'file_content_template.html'), 'r', 
                              encoding='utf-8').read()
 
-        imports = ['<li>import {}</li>'.format(i) for i in self.imports]
+        imports = ['<li><b style="color: darkred;">import</b> {}</li>'.format(i) for i in self.imports]
 
         html = file_template.format(
             filename=self.name,
