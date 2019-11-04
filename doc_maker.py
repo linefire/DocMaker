@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8.4'
+__version__ = '0.8.5'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -150,13 +150,13 @@ class _TreeElement(ABC):
  
         childs = self.get_childs()
         if childs:
-            html = '<li class="caret"><a href="{}">{}</a></li>'.format(self.path, self.name)
+            html = '<li class="caret"><a class="tree-item" href="{}">{}</a></li>'.format(self.path, self.name)
             html += '<ul class="nested">'
             for child in childs:
                 html += child.get_tree()
             html += '</ul>'
         else:
-            html = '<li><a href="{}">{}</a></li>'.format(self.path, self.name)
+            html = '<li><a class="tree-item" href="{}">{}</a></li>'.format(self.path, self.name)
         return html
 
     @abstractmethod
@@ -866,6 +866,7 @@ class DocMaker:
 
         copytree(join('source', 'css'), join(path_to_dir, 'css'))
         copytree(join('source', 'js'), join(path_to_dir, 'js'))
+        copytree(join('source', 'imgs'), join(path_to_dir, 'imgs'))
 
         page_template = open(join('source', 'page_template.html'), 'r', 
                              encoding='utf-8').read()

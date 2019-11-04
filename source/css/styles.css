@@ -18,7 +18,7 @@ ul {
 }
 
 .caret::before {
-    content: "\25B6";
+    content: "\1F846";
     color: black;
     display: inline-block;
     margin-right: 6px;
@@ -59,4 +59,17 @@ li:target {
 
 #sidebar {
     padding-top: 54px; 
+}
+
+.tree-item {
+    outline: none;
+    text-decoration: none;
+    display: inline-block;
+    color: black;
+}
+
+.tree-item:hover {
+    outline: none;
+    text-decoration: none;
+    display: inline-block;
 }
