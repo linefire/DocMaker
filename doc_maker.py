@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '1.0'
+__version__ = '1.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -57,6 +57,8 @@ from os.path import join
 from os.path import exists
 from os.path import basename
 from os.path import dirname
+from os.path import isfile
+from os import listdir
 from os import makedirs
 from re import search
 from re import findall
@@ -104,8 +106,9 @@ class _TreeElement(ABC):
     
     """
 
-    def __init__(self, name: str, path: str, 
-                 parent: Optional['_TreeElement'] = None):
+    def __init__(self, name: str, path: str,
+                 parent: Optional['_TreeElement'] = None,
+                 level: int = 0):
         """Конструктор класу _TreeElement
 
         Parameters
@@ -116,6 +119,8 @@ class _TreeElement(ABC):
             Відносний шлях до об'єкту у документації
         parent : Optional['_TreeElement']
             Батько об'єкту
+        level : int
+            Рівень вкладеності об'єкта у документації
         
         """
 
@@ -123,6 +128,11 @@ class _TreeElement(ABC):
         self.doc: str = 'Опис відсутній'
         self.path: str = path
         self.parent: Optional['_TreeElement'] = parent
+
+        if parent and not level:
+            self.level = parent.level
+        else:
+            self.level = level
 
     def get_tree_from_root(self) -> str:
         """Вертає дерево у html форматі відносно кореневого елементу
@@ -158,8 +168,9 @@ class _TreeElement(ABC):
         childs = self.get_childs()
         if childs:
             html = ('<li class="caret">'
-                    '<a class="tree-item" href="{}">{}</a></li>'
+                    '<a class="tree-item" href="{}{}">{}</a></li>'
                    ).format(
+                        '../' * self.level,
                         self.path, 
                         self.get_name_with_type(self),
                    )
@@ -169,8 +180,9 @@ class _TreeElement(ABC):
             html += '</ul>'
         else:
             html = (
-                '<li><a class="tree-item" href="{}">{}</a></li>'
+                '<li><a class="tree-item" href="{}{}">{}</a></li>'
             ).format(
+                '../' * self.level,
                 self.path, 
                 self.get_name_with_type(self),
             )
@@ -223,6 +235,8 @@ class _TreeElement(ABC):
             else:
                 var_type = 'val' 
             name = '{} {}'.format(var_type, object_.name)
+        if type(object_) is _Dir:
+            name = 'dir {}'.format(object_.name)
         return name
 
     def get_alphabetical_index(self) -> str:
@@ -235,9 +249,10 @@ class _TreeElement(ABC):
         for object_ in objects:
             name = self.get_name_with_type(object_)
             if type(object_) is not _File:
-                html += ('<li><a class="tree-item" href="{path}">'
+                html += ('<li><a class="tree-item" href="{level}{path}">'
                          '{name}</a></li>'
                 ).format(
+                    level='../' * self.level,
                     name=name,
                     path=object_.path,
                 )
@@ -479,7 +494,8 @@ class _Class(_TreeElement):
 
     def __init__(self, data: str, name: str, path: str, fullname: str = '', 
                  parent: Optional[_TreeElement] = None, 
-                 doc: Optional[str] = None):
+                 doc: Optional[str] = None,
+                 level: int = 0):
         """
         
         Parameters
@@ -499,7 +515,7 @@ class _Class(_TreeElement):
         
         """
 
-        super().__init__(name, path, parent)
+        super().__init__(name, path, parent, level)
 
         self.fullname = fullname
         self.vars: List['_Var'] = []
@@ -675,7 +691,8 @@ class _File(_Class):
     """
 
     def __init__(self, data: str, name: str, path: str,
-                 parent: Optional[_TreeElement] = None):
+                 parent: Optional[_TreeElement] = None,
+                 level: int = 0):
         """
         
         Parameters
@@ -691,7 +708,7 @@ class _File(_Class):
         
         """
 
-        super().__init__(data, name, path, parent)
+        super().__init__(data, name, path, '', parent, '', level)
 
 
         self.package = self._get_package(data)
@@ -758,6 +775,42 @@ class _File(_Class):
         """Метод аналізує данні та віддає список імпортів файлу."""
         imports = [i.strip() for i in findall(r'(?<=import).+', data)]
         return imports
+
+
+class _Dir(_TreeElement):
+    """Класс який описує каталог коду
+    
+    """
+
+    def __init__(self, name: str, path: str, 
+                 parent: Optional['_TreeElement'] = None):
+        
+        super().__init__(name, path, parent)
+
+        self.files: List[_File] = []
+        self.dirs: List['_Dir'] = []
+
+    def get_childs(self):
+        return self.dirs + self.files
+
+    def get_content(self):
+        html = '<ul>'
+        for file_ in self.files:
+            html += '<li><a href="{link}">{name}</a></li>'.format(
+                name=file_.name, 
+                link=file_.path,
+            )
+        html += '</ul>'
+        return html
+
+    def add_file(self, name: str, path: str, data: str):
+        self.files.append(_File(
+            data,
+            name,
+            path,
+            self,
+            self.level + 1,
+        ))
 
 
 class DocMaker:
@@ -846,11 +899,11 @@ class DocMaker:
 
         if method == doc_maker.file:
             doc_maker._parse_file(input_path)
-        elif method == doc_maker.file:
+        elif method == doc_maker.dir:
             doc_maker._parse_dir(input_path)
-        elif method == doc_maker.file:
+        elif method == doc_maker.recursive:
             doc_maker._parse_recursive(input_path)
-        elif method == doc_maker.file:
+        elif method == doc_maker.git:
             doc_maker._parse_git(input_path)
 
         doc_maker._write_doc(output_path)
@@ -891,7 +944,6 @@ class DocMaker:
                                        None,
             )
 
-
     def _parse_dir(self, path_to_dir: str):
         """Пошук файлів з каталогу
         
@@ -905,9 +957,26 @@ class DocMaker:
         
         """
 
-        # TODO >1.0 Збір файлів з каталогу
-        pass
+        dir_ = _Dir(
+            basename(path_to_dir),
+            basename(path_to_dir) + '.html',
+        )
+        self._root_element = dir_
 
+        for object_ in listdir(path_to_dir):
+            if (isfile(join(path_to_dir, object_)) and 
+                object_.split('.')[1] == 'kt'):
+
+                doc_path = join(basename(path_to_dir), object_.split('.')[0] + '.html')
+                with open(join(path_to_dir, object_), 
+                          'r', encoding='utf-8') as file:
+                    self._root_element.add_file(
+                                            basename(join(path_to_dir, object_)),
+                                            doc_path,
+                                            file.read(),
+                    )
+
+        
     def _parse_recursive(self, path_to_dir: str):
         """Рекурсивний пошук файлів
         
@@ -993,14 +1062,15 @@ class DocMaker:
         with open(join(path_to_dir, 'index.html'), 'w', 
                   encoding='utf-8') as file:
             file.write(page_template.format(
+                level='',
                 page_content='',
                 tree=self._root_element.get_tree_from_root(),
                 alphabet=self._root_element.get_alphabetical_index(),
             ))
 
-        for object_ in [self._root_element] + self._root_element.get_childs():
+        for object_ in self._root_element.get_all_childs():
 
-            if type(object_) is _File:
+            if type(object_) is _File or type(object_) is _Dir:
                 makedirs(join(path_to_dir, dirname(object_.path)), 
                          exist_ok=True)
 
@@ -1008,6 +1078,7 @@ class DocMaker:
                           encoding='utf-8') as file:
                     file.write(
                         page_template.format(
+                            level='../' * object_.level,
                             page_content=object_.get_content(),
                             tree=self._root_element.get_tree_from_root(),
                             alphabet=self._root_element.get_alphabetical_index(),
