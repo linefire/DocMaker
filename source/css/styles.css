@@ -47,7 +47,7 @@ ul {
 }
 
 .overflow {
-    height: 90%;
+    height: 100%;
     position: relative;
     overflow: auto;
     padding-bottom: 100px;

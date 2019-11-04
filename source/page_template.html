@@ -21,19 +21,27 @@
             <div class="row h-100" id="sidebar">
                 <div class="col-3 position-fixed sidebar h-100">
                     <div class="row h-50" id="tree">
-                        <div class="container bg-light">
+                        <div class="container bg-light overflow">
                             <h4 class="sidebar-header">Дерево змісту</h4>
-                            <ul class="overflow">
+                            <ul>
                                 {{tree}}
                             </ul>
                         </div>
                     </div>
-                    <div class="row h-50" id="alphabet">
-                        <div class="container bg-light">
-                            <h4 class="sidebar-header">Алфавітний показчик</h4>
-                            <ul class="overflow">
-                                {{alphabet}}
-                            </ul>
+                    <div class="row h-50 bg-light" id="alphabet">
+                        <div class="col-12 h-100">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h4 class="sidebar-header">Алфавітний показчик</h4>
+                                </div>
+                            </div>
+                            <div class="row h-100">
+                                <div class="col-12 overflow">
+                                    <ul>
+                                        {{alphabet}}
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
