@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8.6'
+__version__ = '0.9'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -234,19 +234,29 @@ class _Var(_TreeElement):
     
     """
 
-    def __init__(self, name: str, doc: str = 'Опис відсутній'):
+    def __init__(self, name: str, path: str, fullname: str = '',
+                 parent: _TreeElement = None,
+                 doc: str = 'Опис відсутній'):
         """
         
         Parameters
         ----------
         name : str
-            ім'я змінної
+            Ім'я змінної
+        path : str
+            Шлях до об'єкту у документації
+        fullname : str = ''
+            Повна інформація змінної
+        parent : _TreeElement = None
+            Батько об'єкту
         doc : str = 'Опис відсутній'
             Опис змінної
 
         """
 
-        self.name: str = name
+        super().__init__(name, path, parent)
+        
+        self.fullname: str = fullname
         self.doc: str = doc
 
     def get_childs(self) -> List['_TreeElements']:
@@ -268,8 +278,11 @@ class _Var(_TreeElement):
             Інформація змінної у html вигляді
         
         """
-        html = ('<p>{doc}</p>'
-                '<p>{name}</p>')
+        html = '<p id={id}>{doc}<br>{name}</p>'.format(
+            name=self.fullname,
+            doc=self.doc,
+            id=self.path.split('#')[1],
+        )
         return html
 
 
@@ -397,7 +410,7 @@ class _Class(_TreeElement):
         r'(\s+|)'               # G16 Пробіл або нічого
         r'(\w+|)'               # G17 Тип функції або нічого
         r'( +|)'                # G18 Пробіл або нічого
-        r'(fun)'                # G19 Слово fun
+        r'(fun|constructor)'    # G19 Слово fun або constructor
         r'(\s+|)'               # G20 Пробіл або нічого
         r'(\w+)'                # G21 Ім'я функції
         r'(\s+|)'               # G22 Пробіл або нічого
@@ -408,6 +421,21 @@ class _Class(_TreeElement):
         r'(\w+|)'               # G27 Тип значення що повертається
         r'(\s+|)'               # G28 Пробіл або нічого
         r'(\{)'                 # G29 Відкриваюча скобка тіла класу
+        r'|'                    # Далі йде патерн для змінних
+        r'(\/\*[\s\S]*?\*\/|)'  # G30 Опис функції або нічого
+        r'(\s+|)'               # G31 Пробіл або нічого
+        r'(\w+|)'               # G32 Тип змінної або нічого
+        r'( +|)'                # G33 Пробіл або нічого
+        r'(val|var)'            # G34 Слово var або val
+        r'(\s+|)'               # G35 Пробіл або нічого
+        r'(\w+)'                # G36 Ім'я змінної
+        r'(\s+|)'               # G37 Пробіл або нічого
+        r'(\:|)'                # G38 Роздільник або нічого
+        r'(\s+|)'               # G39 Пробіл або нічого
+        r'(\w+|)'               # G40 Тип змінної
+        r'(\s+|)'               # G41 Пробіл або нічого
+        r'(\=|)'                # G42 Дорівнює або нічого
+        r'(.+|)'                # G43 Значення змінної або нічого
     )
 
     def __init__(self, data: str, name: str, path: str, fullname: str = '', 
@@ -506,6 +534,22 @@ class _Class(_TreeElement):
                     self,
                 )
                 self.funcs.append(fun_)
+            if object_.group(34):
+                end_pos_parentless = object_.end()
+
+                fullname = ' '.join([
+                    object_.group(32), object_.group(34), 
+                    object_.group(36), object_.group(38), 
+                    object_.group(40), object_.group(42),
+                    object_.group(43),
+                ])
+                var_ = _Var( 
+                    object_.group(36),
+                    join(doc_path, object_.group(36)),
+                    fullname,
+                    self,
+                )
+                self.vars.append(var_)
 
             # Зтираємо інформацію про цей об'єкт
             data = data[:object_.start()] + data[end_pos_parentless:]
@@ -537,7 +581,7 @@ class _Class(_TreeElement):
         
         """
         
-        return self.classes + self.funcs + self.vars
+        return self.classes + self.vars + self.funcs 
 
     def get_content(self) -> str:
         """Метод який вертає інформацію класу у html вигляді
