@@ -7,7 +7,7 @@
 2.Модуль можна імпортувати або запустити.
 3.Модуль не потребує сторонніх бібліотек.
 4.Модуль може опрацювати:
-    a) Окремий файл. - у розробці до верії 1.0
+    a) Окремий файл.
     b) Файли каталогу. - у розробці до верії 2.0
     с) Файли каталогу та підкаталогів. - у розробці до верії 3.0
     d) Файли з git репозиторія. - у розробці до верії 4.0
@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.9.2'
+__version__ = '1.0'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -65,12 +65,9 @@ from datetime import datetime
 from shutil import rmtree
 from shutil import copytree
 
-# TODO 1.0 Збір інформації з файлу
 # TODO 2.0 Збір інформації з файлів каталогу
 # TODO 3.0 Збір інформації з файлів каталогу та підкаталогів
 # TODO 4.0 Збір інформації з git репозиторію
-# TODO <1.0 Генерування документації у html вигляді
-# TODO <1.0 Підключити bootstrap 4.3.x
 # TODO 5.0 Дизайн документації
 
 
@@ -85,6 +82,8 @@ class _TreeElement(ABC):
         Відносний шлях до об'єкту у документації
     parent : Optional['_TreeElement']
         Батько об'єкту
+    doc : str
+        Опис об'єкту
 
     Methods
     -------
@@ -94,6 +93,14 @@ class _TreeElement(ABC):
         Вертає дерево дітей у html форматі
     get_childs()
         Вертає список дітей цього об'єкту
+    get_content()
+        Вертає інформацію об'єкту у html вигляді
+    get_name_with_type(object_: '_TreeElement')
+        Вертає тип + ім'я об'єкту відносно типу
+    get_alphabetical_index()
+        Вертає алфавітний показчик
+    get_all_childs()
+        Вертає список всых дытей цього об'єкту
     
     """
 
@@ -203,6 +210,7 @@ class _TreeElement(ABC):
 
     @staticmethod
     def get_name_with_type(object_: '_TreeElement') -> str:
+        """Модуль віддає тип обє'кту + ім'я відносно типу"""
         if type(object_) is _File:
             name = 'file {}'.format(object_.name)
         if type(object_) is _Class:
@@ -227,7 +235,9 @@ class _TreeElement(ABC):
         for object_ in objects:
             name = self.get_name_with_type(object_)
             if type(object_) is not _File:
-                html += '<li><a class="tree-item" href="{path}">{name}</a></li>'.format(
+                html += ('<li><a class="tree-item" href="{path}">'
+                         '{name}</a></li>'
+                ).format(
                     name=name,
                     path=object_.path,
                 )
@@ -251,6 +261,8 @@ class _Var(_TreeElement):
         Ім'я змінної
     doc : str
         Опис змінної
+    fullname : str
+        Повна інформація змінної
 
     Methods
     -------
@@ -708,10 +720,13 @@ class _File(_Class):
         
         """
 
-        file_template = open(join('source', 'file_content_template.html'), 'r', 
-                             encoding='utf-8').read()
+        file_template = open(join('source', 'file_content_template.html'), 
+                             'r', encoding='utf-8').read()
 
-        imports = ['<li><b style="color: darkred;">import</b> {}</li>'.format(i) for i in self.imports]
+        imports = []
+        for import_ in self.imports:
+            imports.append(('<li><b style="color: darkred;">'
+                            'import</b> {}</li>').format(import_))
 
         html = file_template.format(
             filename=self.name,
@@ -758,6 +773,8 @@ class DocMaker:
         Парсинг інформації з файлів каталогу та його підкаталогів.
     git : int
         Парсинг інформації з файлів git репозиторія.
+    _root_element : Optional[_TreeElement]
+        Корневий елемент дерева об'єктів
 
     Methods
     -------
@@ -933,7 +950,7 @@ class DocMaker:
             Шлях де буде збережено документацію.
         
         """
-        
+
         if not path_to_dir:
             path_to_dir = 'documentions'
 
