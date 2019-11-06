@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '2.0'
+__version__ = '2.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -58,6 +58,8 @@ from os.path import exists
 from os.path import basename
 from os.path import dirname
 from os.path import isfile
+from os.path import split
+from os import walk
 from os import listdir
 from os import makedirs
 from re import search
@@ -719,7 +721,6 @@ class _File(_Class):
 
         super().__init__(data, name, path, '', parent, '', level)
 
-
         self.package = self._get_package(data)
         self.imports = self._get_imports(data)
         self.doc = self._get_doc(data)
@@ -792,9 +793,10 @@ class _Dir(_TreeElement):
     """
 
     def __init__(self, name: str, path: str, 
-                 parent: Optional['_TreeElement'] = None):
+                 parent: Optional['_TreeElement'] = None,
+                 level: int = 0):
         
-        super().__init__(name, path, parent)
+        super().__init__(name, path, parent, level)
 
         self.files: List[_File] = []
         self.dirs: List['_Dir'] = []
@@ -813,14 +815,31 @@ class _Dir(_TreeElement):
         return html
 
     def add_file(self, name: str, path: str, data: str):
-        self.files.append(_File(
-            data,
-            name,
-            path,
-            self,
-            self.level + 1,
-        ))
+        for dir_ in self.dirs:
+            if path.__contains__(dir_.path.split('.')[0]):
+                dir_.add_file(name, path, data)
+                break
+        else:
+            self.files.append(_File(
+                data,
+                name,
+                path,
+                self,
+                self.level + 1,
+            ))
 
+    def add_dir(self, path: str, name: str, level: int = 0):
+        for dir_ in self.dirs:
+            if path.__contains__(dir_.path.split('.')[0]):
+                dir_.add_dir(path, name)
+                break
+        else:
+            self.dirs.append(_Dir(
+                name,
+                path,
+                self,
+                self.level + 1,
+            ))
 
 class DocMaker:
     """Головний клас модуля який опрацьовує та генерує документацію.
@@ -999,8 +1018,40 @@ class DocMaker:
         
         """
 
-        # TODO >2.0 Збір файлів з каталогу
-        pass
+        dir_ = _Dir(
+            basename(path_to_dir),
+            basename(path_to_dir) + '.html',
+        )
+        self._root_element = dir_
+
+        path_to_delete, _ = split(path_to_dir)
+        for root, dirs, files in walk(path_to_dir):
+            relative_path = root.replace(path_to_delete, '')[1:]
+            for dir_ in dirs:
+                if dir_.__contains__('.'):
+                    continue
+                self._root_element.add_dir(
+                    join(relative_path, dir_ + '.html'), 
+                    dir_,
+                )
+            for file_ in files:
+                try:
+                    if file_.split('.')[1] != 'kt':
+                        continue
+                except IndexError:
+                    continue
+
+                with open(join(root, file_), 'r', encoding='utf-8') as file:
+                    self._root_element.add_file(
+                        file_,
+                        join(relative_path, file_.split('.')[0] + '.html'),
+                        file.read(),
+                    )
+        
+        for object_ in self._root_element.get_all_childs():
+            if type(object_) is _Dir:
+                if not object_.get_childs():
+                    object_.parent.dirs.remove(object_)
 
     def _parse_git(self, path_to_git: str):
         """Обробка git репозиторія
@@ -1080,8 +1131,11 @@ class DocMaker:
         for object_ in self._root_element.get_all_childs():
 
             if type(object_) is _File or type(object_) is _Dir:
-                makedirs(join(path_to_dir, dirname(object_.path)), 
-                         exist_ok=True)
+                try:
+                    makedirs(join(path_to_dir, dirname(object_.path)), 
+                            exist_ok=True)
+                except FileExistsError:
+                    pass
 
                 with open(join(path_to_dir, object_.path), 'w', 
                           encoding='utf-8') as file:
