@@ -259,7 +259,7 @@ class _TreeElement(ABC):
         html = ''
         for object_ in objects:
             name = self.get_name_with_type(object_)
-            if type(object_) is not _File:
+            if type(object_) not in [_File, _Dir]:
                 html += ('<li><a class="tree-item" href="{level}{path}">'
                          '{name}</a></li>'
                 ).format(
