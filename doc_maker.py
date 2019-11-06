@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '2.1'
+__version__ = '2.2'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -1048,10 +1048,19 @@ class DocMaker:
                         file.read(),
                     )
         
+        # Видаляємо непотрібні каталоги
         for object_ in self._root_element.get_all_childs():
             if type(object_) is _Dir:
                 if not object_.get_childs():
                     object_.parent.dirs.remove(object_)
+                elif len(object_.get_childs()) == 1:
+                    dir_ = object_.get_childs()[0]
+                    if type(dir_) is not _Dir:
+                        continue
+
+                    object_.parent.dirs.remove(object_)
+                    object_.parent.dirs.append(dir_)
+                    dir_.name = join(object_.name, dir_.name)
 
     def _parse_git(self, path_to_git: str):
         """Обробка git репозиторія
