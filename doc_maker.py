@@ -10,7 +10,7 @@
     a) Окремий файл.
     b) Файли каталогу.
     с) Файли каталогу та підкаталогів.
-    d) Файли з git репозиторія. - у розробці до верії 4.0
+    d) Файли з git репозиторія.
 5.Модуль генерує документацію у вигляді html сторінок.
 6.Модуль генерує html сторінки з використанням технології bootstrap.
 
@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '3.0'
+__version__ = '4.0'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -62,6 +62,11 @@ from os.path import split
 from os import walk
 from os import listdir
 from os import makedirs
+from os import system
+from os import access
+from os import chmod
+from os import W_OK
+from stat import S_IWUSR
 from re import search
 from re import findall
 from re import compile as re_compile
@@ -69,8 +74,13 @@ from datetime import datetime
 from shutil import rmtree
 from shutil import copytree
 
-# TODO 4.0 Збір інформації з git репозиторію
 # TODO 5.0 Дизайн документації
+
+def remove_error(func, path, exc_info):
+    # Якщо не видалився файл пробуємо змінити його права
+    if not access(path, W_OK):
+        chmod(path, S_IWUSR)
+        func(path)
 
 
 class _TreeElement(ABC):
@@ -1056,10 +1066,11 @@ class DocMaker:
                     dir_ = object_.get_childs()[0]
                     if type(dir_) is not _Dir:
                         continue
-
-                    object_.parent.dirs.remove(object_)
-                    object_.parent.dirs.append(dir_)
-                    dir_.name = join(object_.name, dir_.name)
+                    
+                    if object_.parent:
+                        object_.parent.dirs.remove(object_)
+                        object_.parent.dirs.append(dir_)
+                        dir_.name = join(object_.name, dir_.name)
 
     def _parse_git(self, path_to_git: str):
         """Обробка git репозиторія
@@ -1075,8 +1086,13 @@ class DocMaker:
         
         """
 
-        # TODO >3.0 Збір файлів з git репозиторія
-        pass
+        name = basename(path_to_git).split('.')[0]
+
+        system('git clone {}'.format(path_to_git))
+
+        self._parse_recursive(name)
+        
+        rmtree(name, onerror=remove_error)
 
     def _write_doc(self, path_to_dir: str):
         """Генерує зібрану інформацію у HTML форматі.
