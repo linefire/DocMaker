@@ -9,7 +9,7 @@
 4.Модуль може опрацювати:
     a) Окремий файл.
     b) Файли каталогу.
-    с) Файли каталогу та підкаталогів. - у розробці до верії 3.0
+    с) Файли каталогу та підкаталогів.
     d) Файли з git репозиторія. - у розробці до верії 4.0
 5.Модуль генерує документацію у вигляді html сторінок.
 6.Модуль генерує html сторінки з використанням технології bootstrap.
@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '2.2'
+__version__ = '3.0'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -69,7 +69,6 @@ from datetime import datetime
 from shutil import rmtree
 from shutil import copytree
 
-# TODO 3.0 Збір інформації з файлів каталогу та підкаталогів
 # TODO 4.0 Збір інформації з git репозиторію
 # TODO 5.0 Дизайн документації
 
