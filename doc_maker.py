@@ -815,10 +815,17 @@ class _Dir(_TreeElement):
 
     def get_content(self):
         html = '<ul>'
+        for dir_ in self.dirs:
+            html += '<li><a href="{level}{link}">dir {name}</a></li>'.format(
+                name=dir_.name, 
+                link=dir_.path,
+                level='../' * self.level,
+            )
         for file_ in self.files:
-            html += '<li><a href="{link}">{name}</a></li>'.format(
+            html += '<li><a href="{level}{link}">file {name}</a></li>'.format(
                 name=file_.name, 
                 link=file_.path,
+                level='../' * self.level,
             )
         html += '</ul>'
         return html
