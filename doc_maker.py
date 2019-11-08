@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '4.0'
+__version__ = '4.0.1'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -468,7 +468,7 @@ class _Class(_TreeElement):
         r'(\/\*[\s\S]*?\*\/|)'  # G1 Опис класу або нічого
         r'(\s+|)'               # G2 Пробіл або нічого
         r'(\w+|)'               # G3 Тип класу або нічого
-        r'(\s+|)'               # G4 Пробіл або нічого
+        r'( +|)'                # G4 Пробіл або нічого
         r'(class)'              # G5 Слово class
         r'(\s+|)'               # G6 Пробіл або нічого
         r'(\w+)'                # G7 Ім'я класу
