@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '4.3'
+__version__ = '5.0'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -75,7 +75,6 @@ from datetime import datetime
 from shutil import rmtree
 from shutil import copytree
 
-# TODO 5.0 Дизайн документації
 
 def remove_error(func, path, exc_info):
     # Якщо не видалився файл пробуємо змінити його права
@@ -189,7 +188,9 @@ class _TreeElement(ABC):
         childs = self.get_childs()
         if childs:
             html = ('<li>'
-                    '<span class="caret"><a class="tree-item" href="{}{}">{}</a></span>'
+                    '<span class="caret">'
+                    '<a class="tree-item" href="{}{}">{}</a>'
+                    '</span>'
                    ).format(
                         '../' * level,
                         self.path, 
@@ -1017,11 +1018,15 @@ class DocMaker:
             if (isfile(join(path_to_dir, object_)) and 
                 object_.split('.')[1] == 'kt'):
 
-                doc_path = join(basename(path_to_dir), object_.split('.')[0] + '.html')
+                doc_path = join(
+                    basename(path_to_dir), 
+                    object_.split('.')[0] + '.html',
+                )
                 with open(join(path_to_dir, object_), 
                           'r', encoding='utf-8') as file:
+                    name = basename(join(path_to_dir, object_))
                     self._root_element.add_file(
-                                            basename(join(path_to_dir, object_)),
+                                            name,
                                             doc_path,
                                             file.read(),
                     )
@@ -1127,7 +1132,8 @@ class DocMaker:
         if exists(path_to_dir):
             while True:
                 print(('Такий каталог "{}" вже існує, якщо продовжити' 
-                      '- вся інформація в ньому буде знищена').format(path_to_dir))
+                      '- вся інформація в ньому буде знищена'
+                      ).format(path_to_dir))
                 command = input('Продовжити? [Y(продовжити)\\N(відмінити)]'
                                 ' - оберіть команду: ')
                 if command.lower() == 'y':
@@ -1155,12 +1161,24 @@ class DocMaker:
             version=__version__,
         )
 
+        index_content = """
+        <div class="row d-flex align-self-center">
+            <div class="col-12">
+                <h1>{project_name}</h1>
+                <h1>Згенеровано {date}</h1>
+                <h1>Завдяки DocMaker {version}</h1>
+            </div>
+        </div>""".format(
+            project_name=self._root_element.name,
+            date=datetime.now().strftime('%d.%m.%Y %H:%M'),
+            version=__version__,
+        )
         
         with open(join(path_to_dir, 'index.html'), 'w', 
                   encoding='utf-8') as file:
             file.write(page_template.format(
                 level='',
-                page_content='',
+                page_content=index_content,
                 tree=self._root_element.get_tree_from_root(0),
                 alphabet=self._root_element.get_alphabetical_index(),
             ))
@@ -1176,11 +1194,12 @@ class DocMaker:
 
                 with open(join(path_to_dir, object_.path), 'w', 
                           encoding='utf-8') as file:
+                    re = self._root_element
                     html = page_template.format(
                         level='../' * object_.level,
                         page_content=object_.get_content(),
-                        tree=self._root_element.get_tree_from_root(object_.level),
-                        alphabet=self._root_element.get_alphabetical_index(object_.level),
+                        tree=re.get_tree_from_root(object_.level),
+                        alphabet=re.get_alphabetical_index(object_.level),
                     )
                     html = self.get_style(html)
                     file.write(html)
