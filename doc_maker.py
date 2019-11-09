@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '4.1'
+__version__ = '4.2'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -69,6 +69,7 @@ from os import W_OK
 from stat import S_IWUSR
 from re import search
 from re import findall
+from re import sub
 from re import compile as re_compile
 from datetime import datetime
 from shutil import rmtree
@@ -1170,14 +1171,34 @@ class DocMaker:
 
                 with open(join(path_to_dir, object_.path), 'w', 
                           encoding='utf-8') as file:
-                    file.write(
-                        page_template.format(
-                            level='../' * object_.level,
-                            page_content=object_.get_content(),
-                            tree=self._root_element.get_tree_from_root(object_.level),
-                            alphabet=self._root_element.get_alphabetical_index(object_.level),
-                        ) 
+                    html = page_template.format(
+                        level='../' * object_.level,
+                        page_content=object_.get_content(),
+                        tree=self._root_element.get_tree_from_root(object_.level),
+                        alphabet=self._root_element.get_alphabetical_index(object_.level),
                     )
+                    html = self.get_style(html)
+                    file.write(html)
+
+    @staticmethod
+    def get_style(html: str) -> str:
+        """Добавляє стилі по відведеним крітеріям в HTML"""
+
+        html = sub(
+            (
+                r'(?<!\w)'
+                r'(class|fun|override|inner|var|dir|file|val|open)'
+                r'(?!=\w|\=)'
+            ),
+                '<b style="color: darkred;">\g<1></b>',
+                html,
+        )
+        html = sub(
+            r'(Опис відсутній)',
+            '<small style="color: lightgray;">\g<1></small>',
+            html,
+        )
+        return html
 
 
 if __name__ == "__main__":
