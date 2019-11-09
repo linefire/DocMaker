@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '4.2'
+__version__ = '4.3'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -815,13 +815,18 @@ class _Dir(_TreeElement):
         return self.dirs + self.files
 
     def get_content(self):
-        html = '<ul>'
+        html = '<h1>Каталог {}</h1>'.format(basename(self.name))
+        html += '<h3>Каталоги</h3>'
+        html += '<ul>'
         for dir_ in self.dirs:
             html += '<li><a href="{level}{link}">dir {name}</a></li>'.format(
                 name=dir_.name, 
                 link=dir_.path,
                 level='../' * self.level,
             )
+        html += '</ul>'
+        html += '<h3>Файли</h3>'
+        html += '<ul>'
         for file_ in self.files:
             html += '<li><a href="{level}{link}">file {name}</a></li>'.format(
                 name=file_.name, 
