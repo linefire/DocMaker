@@ -7,10 +7,10 @@
 2.Модуль можна імпортувати або запустити.
 3.Модуль не потребує сторонніх бібліотек.
 4.Модуль може опрацювати:
-    a) Окремий файл. - у розробці до верії 1.0
-    b) Файли каталогу. - у розробці до верії 2.0
-    с) Файли каталогу та підкаталогів. - у розробці до верії 3.0
-    d) Файли з git репозиторія. - у розробці до верії 4.0
+    a) Окремий файл.
+    b) Файли каталогу.
+    с) Файли каталогу та підкаталогів.
+    d) Файли з git репозиторія.
 5.Модуль генерує документацію у вигляді html сторінок.
 6.Модуль генерує html сторінки з використанням технології bootstrap.
 
@@ -44,7 +44,7 @@
 
 """
 
-__version__ = '0.8'
+__version__ = '5.0'
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
@@ -57,21 +57,30 @@ from os.path import join
 from os.path import exists
 from os.path import basename
 from os.path import dirname
+from os.path import isfile
+from os.path import split
+from os import walk
+from os import listdir
 from os import makedirs
+from os import system
+from os import access
+from os import chmod
+from os import W_OK
+from stat import S_IWUSR
 from re import search
 from re import findall
+from re import sub
 from re import compile as re_compile
 from datetime import datetime
 from shutil import rmtree
 from shutil import copytree
 
-# TODO 1.0 Збір інформації з файлу
-# TODO 2.0 Збір інформації з файлів каталогу
-# TODO 3.0 Збір інформації з файлів каталогу та підкаталогів
-# TODO 4.0 Збір інформації з git репозиторію
-# TODO <1.0 Генерування документації у html вигляді
-# TODO <1.0 Підключити bootstrap 4.3.x
-# TODO 5.0 Дизайн документації
+
+def remove_error(func, path, exc_info):
+    # Якщо не видалився файл пробуємо змінити його права
+    if not access(path, W_OK):
+        chmod(path, S_IWUSR)
+        func(path)
 
 
 class _TreeElement(ABC):
@@ -85,6 +94,8 @@ class _TreeElement(ABC):
         Відносний шлях до об'єкту у документації
     parent : Optional['_TreeElement']
         Батько об'єкту
+    doc : str
+        Опис об'єкту
 
     Methods
     -------
@@ -94,11 +105,20 @@ class _TreeElement(ABC):
         Вертає дерево дітей у html форматі
     get_childs()
         Вертає список дітей цього об'єкту
+    get_content()
+        Вертає інформацію об'єкту у html вигляді
+    get_name_with_type(object_: '_TreeElement')
+        Вертає тип + ім'я об'єкту відносно типу
+    get_alphabetical_index()
+        Вертає алфавітний показчик
+    get_all_childs()
+        Вертає список всых дытей цього об'єкту
     
     """
 
-    def __init__(self, name: str, path: str, 
-                 parent: Optional['_TreeElement'] = None):
+    def __init__(self, name: str, path: str,
+                 parent: Optional['_TreeElement'] = None,
+                 level: int = 0):
         """Конструктор класу _TreeElement
 
         Parameters
@@ -109,6 +129,8 @@ class _TreeElement(ABC):
             Відносний шлях до об'єкту у документації
         parent : Optional['_TreeElement']
             Батько об'єкту
+        level : int
+            Рівень вкладеності об'єкта у документації
         
         """
 
@@ -117,29 +139,44 @@ class _TreeElement(ABC):
         self.path: str = path
         self.parent: Optional['_TreeElement'] = parent
 
-    def get_tree_from_root(self) -> str:
+        if parent and not level:
+            self.level = parent.level
+        else:
+            self.level = level
+
+    def get_tree_from_root(self, level: int = 0) -> str:
         """Вертає дерево у html форматі відносно кореневого елементу
 
         Метод знаходить корневий eлемент дерева, та вертає html
         сторінку з метода get_tree.
+
+        Parameters
+        ----------
+        level : int
+            Рівень вкладеності файлу у документації
 
         Returns
         -------
         self.get_tree : str
             Вертає дерево у вигляді html коду відносно корeневого 
             елементу.
-        
+
         """
 
         if self.parent:
-            return self.parent.get_tree_from_root()
+            return self.parent.get_tree_from_root(level)
         else:
-            return self.get_tree()
+            return self.get_tree(level)
 
-    def get_tree(self) -> str:
+    def get_tree(self, level: int = 0) -> str:
         """Вертає дерево своїх дітей у html форматі
 
         Метод рекурсивно вертає дерево змісту у html форматі.
+
+        Parameters
+        ----------
+        level : int = 0
+            Рівень вкладеності файлу у документації
 
         Returns
         -------
@@ -147,14 +184,30 @@ class _TreeElement(ABC):
             Вертає html код дерева змісту себе та своїх дітей.
         
         """
-
-        html = '<li class="caret"><a href="{}">{}</a></li>'.format(self.path, self.name)
+ 
         childs = self.get_childs()
         if childs:
+            html = ('<li>'
+                    '<span class="caret">'
+                    '<a class="tree-item" href="{}{}">{}</a>'
+                    '</span>'
+                   ).format(
+                        '../' * level,
+                        self.path, 
+                        self.get_name_with_type(self),
+                   )
             html += '<ul class="nested">'
             for child in childs:
-                html += child.get_tree()
-            html += '</ul>'
+                html += child.get_tree(level)
+            html += '</ul></li>'
+        else:
+            html = (
+                '<li><a class="tree-item" href="{}{}">{}</a></li>'
+            ).format(
+                '../' * level,
+                self.path, 
+                self.get_name_with_type(self),
+            )
         return html
 
     @abstractmethod
@@ -189,6 +242,52 @@ class _TreeElement(ABC):
 
         pass
 
+    @staticmethod
+    def get_name_with_type(object_: '_TreeElement') -> str:
+        """Модуль віддає тип обє'кту + ім'я відносно типу"""
+        if type(object_) is _File:
+            name = 'file {}'.format(object_.name)
+        if type(object_) is _Class:
+            name = 'class {}'.format(object_.name)
+        if type(object_) is _Fun:
+            name = 'fun {}'.format(object_.name)
+        if type(object_) is _Var:
+            if object_.fullname.__contains__(' var '):
+                var_type = 'var'
+            else:
+                var_type = 'val' 
+            name = '{} {}'.format(var_type, object_.name)
+        if type(object_) is _Dir:
+            name = 'dir {}'.format(object_.name)
+        return name
+
+    def get_alphabetical_index(self, level: int = 0) -> str:
+        """Метод віддає список імен у документації в html вигляді"""
+
+        objects = self.get_all_childs()
+        objects = sorted(objects, key=lambda o: o.name.lower())
+
+        html = ''
+        for object_ in objects:
+            name = self.get_name_with_type(object_)
+            if type(object_) not in [_File, _Dir]:
+                html += ('<li><a class="tree-item" href="{level}{path}">'
+                         '{name}</a></li>'
+                ).format(
+                    level='../' * level,
+                    name=name,
+                    path=object_.path,
+                )
+        return html
+
+    def get_all_childs(self) -> List['_TreeElement']:
+        """Метод віддає список дітей і себе"""
+
+        childs = []
+        for child_ in self.get_childs():
+            childs += child_.get_all_childs()
+        childs.append(self)
+        return childs
 
 class _Var(_TreeElement):
     """Клас який описує змінні класів Kotlin
@@ -199,6 +298,8 @@ class _Var(_TreeElement):
         Ім'я змінної
     doc : str
         Опис змінної
+    fullname : str
+        Повна інформація змінної
 
     Methods
     -------
@@ -209,19 +310,29 @@ class _Var(_TreeElement):
     
     """
 
-    def __init__(self, name: str, doc: str = 'Опис відсутній'):
+    def __init__(self, name: str, path: str, fullname: str = '',
+                 parent: _TreeElement = None,
+                 doc: str = 'Опис відсутній'):
         """
         
         Parameters
         ----------
         name : str
-            ім'я змінної
+            Ім'я змінної
+        path : str
+            Шлях до об'єкту у документації
+        fullname : str = ''
+            Повна інформація змінної
+        parent : _TreeElement = None
+            Батько об'єкту
         doc : str = 'Опис відсутній'
             Опис змінної
 
         """
 
-        self.name: str = name
+        super().__init__(name, path, parent)
+        
+        self.fullname: str = fullname
         self.doc: str = doc
 
     def get_childs(self) -> List['_TreeElements']:
@@ -243,8 +354,11 @@ class _Var(_TreeElement):
             Інформація змінної у html вигляді
         
         """
-        html = ('<p>{doc}</p>'
-                '<p>{name}</p>')
+        html = '<p id={id}>{doc}<br>{name}</p>'.format(
+            name=self.fullname,
+            doc=self.doc,
+            id=self.path.split('#')[1],
+        )
         return html
 
 
@@ -267,15 +381,19 @@ class _Fun(_TreeElement):
     
     """
 
-    def __init__(self, name: str, path: str, 
+    def __init__(self, name: str, path: str, fullname: str = '',
                  parent: Optional[_TreeElement] = None,
-                 doc: str = None):
+                 doc: str = 'Опис відсутній'):
         """
         
         Parameters
         ----------
         name : str
-            ім'я методу
+            Скорочене ім'я методу
+        fullname : str
+            Повне ім'я методу
+        parent : _TreeElement
+            Батько об'єкту
         doc : str = 'Опис відсутній'
             Опис методу
 
@@ -283,6 +401,7 @@ class _Fun(_TreeElement):
 
         super().__init__(name, path, parent)
 
+        self.fullname = fullname
         self.doc: str = doc
 
     def get_childs(self) -> List['_TreeElements']:
@@ -306,11 +425,11 @@ class _Fun(_TreeElement):
         """
 
         html = (
-            '<li>Опис функції {doc}</li>'
-            '<li id="{id}">fun {name}</li>'
+            '<li id="{id}"><span>{name}</span></li>'
+            '<ul>{doc}</ul><br>'
         ).format(
-            doc='',
-            name=self.name,
+            doc=self.doc,
+            name=self.fullname,
             id=self.path.split('#')[1],
         )
         return html
@@ -351,33 +470,54 @@ class _Class(_TreeElement):
         r'(\/\*[\s\S]*?\*\/|)'  # G1 Опис класу або нічого
         r'(\s+|)'               # G2 Пробіл або нічого
         r'(\w+|)'               # G3 Тип класу або нічого
-        r'(\s+|)'               # G4 Пробіл або нічого
+        r'( +|)'                # G4 Пробіл або нічого
         r'(class)'              # G5 Слово class
         r'(\s+|)'               # G6 Пробіл або нічого
         r'(\w+)'                # G7 Ім'я класу
         r'(\s+|)'               # G8 Пробіл або нічого
         r'(\:|)'                # G9 Роздільник або нічого
         r'(\s+|)'               # G10 Пробіл або нічого
-        r'(\w+\(.*?\)|)'        # G11 Ім'я класу родителя або нічого
-        r'(\s+|)'               # G12 Пробіл або нічого
-        r'(\{)'                 # G13 Відкриваюча скобка тіла класу
+        r'(\w+|)'               # G11 Ім'я класу родителя або нічого
+        r'(\(.*?\)|)'           # G12 Параметри класу родителя
+        r'(\s+|)'               # G13 Пробіл або нічого
+        r'(\{)'                 # G14 Відкриваюча скобка тіла класу
         r'|'                    # Далі йде патерн для функції
-        r'(\/\*[\s\S]*?\*\/|)'  # G14 Опис функції або нічого
-        r'(\s+|)'               # G15 Пробіл або нічого
-        r'(\w+|)'               # G16 Тип функції або нічого
-        r'(\s+|)'               # G17 Пробіл або нічого
-        r'(fun)'                # G18 Слово fun
-        r'(\s+|)'               # G19 Пробіл або нічого
-        r'(\w+)'                # G20 Ім'я функції
-        r'(\s+|)'               # G21 Пробіл або нічого
-        r'(\(.*?\))'            # G22 Параметри функції
-        r'(\s+|)'               # G23 Пробіл або нічого
-        r'(\{)'                 # G24 Відкриваюча скобка тіла класу
+        r'(\/\*[\s\S]*?\*\/|)'  # G15 Опис функції або нічого
+        r'(\s+|)'               # G16 Пробіл або нічого
+        r'(\w+|)'               # G17 Тип функції або нічого
+        r'( +|)'                # G18 Пробіл або нічого
+        r'(fun|constructor)'    # G19 Слово fun або constructor
+        r'(\s+|)'               # G20 Пробіл або нічого
+        r'(\w+)'                # G21 Ім'я функції
+        r'(\s+|)'               # G22 Пробіл або нічого
+        r'(\(.*?\))'            # G23 Параметри функції
+        r'(\s+|)'               # G24 Пробіл або нічого
+        r'(\:|)'                # G25 Роздільник або нічого
+        r'(\s+|)'               # G26 Пробіл або нічого
+        r'(\w+|)'               # G27 Тип значення що повертається
+        r'(\s+|)'               # G28 Пробіл або нічого
+        r'(\{)'                 # G29 Відкриваюча скобка тіла класу
+        r'|'                    # Далі йде патерн для змінних
+        r'(\/\*[\s\S]*?\*\/|)'  # G30 Опис функції або нічого
+        r'(\s+|)'               # G31 Пробіл або нічого
+        r'(\w+|)'               # G32 Тип змінної або нічого
+        r'( +|)'                # G33 Пробіл або нічого
+        r'(val|var)'            # G34 Слово var або val
+        r'(\s+|)'               # G35 Пробіл або нічого
+        r'(\w+)'                # G36 Ім'я змінної
+        r'(\s+|)'               # G37 Пробіл або нічого
+        r'(\:|)'                # G38 Роздільник або нічого
+        r'(\s+|)'               # G39 Пробіл або нічого
+        r'(\w+|)'               # G40 Тип змінної
+        r'(\s+|)'               # G41 Пробіл або нічого
+        r'(\=|)'                # G42 Дорівнює або нічого
+        r'(.+|)'                # G43 Значення змінної або нічого
     )
 
-    def __init__(self, data: str, name: str, path: str, 
-                 parent: Optional[_TreeElement] = None,
-                 doc: Optional[str] = None):
+    def __init__(self, data: str, name: str, path: str, fullname: str = '', 
+                 parent: Optional[_TreeElement] = None, 
+                 doc: Optional[str] = None,
+                 level: int = 0):
         """
         
         Parameters
@@ -385,7 +525,9 @@ class _Class(_TreeElement):
         data : str
             Строка в який передається інформація тільки класу.
         name : str
-            Ім'я класу
+            Скорочене ім'я класу
+        fullname : str
+            Повне ім'я класу
         path : str
             Шлях до файлу у документації
         parent : _TreeElement
@@ -395,8 +537,9 @@ class _Class(_TreeElement):
         
         """
 
-        super().__init__(name, path, parent)
+        super().__init__(name, path, parent, level)
 
+        self.fullname = fullname
         self.vars: List['_Var'] = []
         self.funcs: List['_Fun'] = []
         self.classes: List['_Class'] = []
@@ -434,29 +577,56 @@ class _Class(_TreeElement):
             
             if object_.group(5):
                 # Позиції де починаєтся і закінчуєтся тіло класу
-                start_pos_parentless = object_.start(13)
+                start_pos_parentless = object_.start(14)
                 end_pos_parentless = self._get_body(data, start_pos_parentless)
                 
+                fullname = ' '.join([
+                    object_.group(3), object_.group(5), object_.group(7), 
+                    object_.group(9), object_.group(11) + object_.group(12),
+                ])
                 # Создаємо клас та добавляємо у список класів
                 class_ = _Class(
                     data[start_pos_parentless:end_pos_parentless], 
                     object_.group(7),
                     join(doc_path, object_.group(7)),
+                    fullname,
                     self,
                 )
                 self.classes.append(class_)
-            if object_.group(18):
+            if object_.group(19):
                 # Позиції де починаєтся і закінчуєтся тіло функції
-                start_pos_parentless = object_.start(24)
+                start_pos_parentless = object_.start(29)
                 end_pos_parentless = self._get_body(data, start_pos_parentless)
                 
-                # Создаємо клас та добавляємо у список класів
+                fullname = ' '.join([
+                    object_.group(17), object_.group(19), 
+                    object_.group(21) + object_.group(23), 
+                    object_.group(25), object_.group(27),
+                ])
+                # Создаємо клас та добавляємо у список функцій
                 fun_ = _Fun( 
-                    object_.group(20),
-                    join(doc_path, object_.group(20)),
+                    object_.group(21),
+                    join(doc_path, object_.group(21)),
+                    fullname,
                     self,
                 )
                 self.funcs.append(fun_)
+            if object_.group(34):
+                end_pos_parentless = object_.end()
+
+                fullname = ' '.join([
+                    object_.group(32), object_.group(34), 
+                    object_.group(36), object_.group(38), 
+                    object_.group(40), object_.group(42),
+                    object_.group(43),
+                ])
+                var_ = _Var( 
+                    object_.group(36),
+                    join(doc_path, object_.group(36)),
+                    fullname,
+                    self,
+                )
+                self.vars.append(var_)
 
             # Зтираємо інформацію про цей об'єкт
             data = data[:object_.start()] + data[end_pos_parentless:]
@@ -488,7 +658,7 @@ class _Class(_TreeElement):
         
         """
         
-        return self.classes + self.funcs + self.vars
+        return self.classes + self.vars + self.funcs 
 
     def get_content(self) -> str:
         """Метод який вертає інформацію класу у html вигляді
@@ -503,12 +673,11 @@ class _Class(_TreeElement):
         if type(self) is _Class:
             id_ = self.path.split('#')[1]
             html = (
-                '<p>Опис класу {doc}</p>'
-                '<li id="{id}"><span>class {name}</span>'
-                '<ul>{{class_childs}}</ul></li>'
+                '<li id="{id}"><span>{name}</span>'
+                '<ul><p>{doc}</p><br>{{class_childs}}</ul>'
             ).format(
-                doc='',
-                name=self.name,
+                doc=self.doc,
+                name=self.fullname,
                 id=id_,
             )
         else:
@@ -544,7 +713,8 @@ class _File(_Class):
     """
 
     def __init__(self, data: str, name: str, path: str,
-                 parent: Optional[_TreeElement] = None):
+                 parent: Optional[_TreeElement] = None,
+                 level: int = 0):
         """
         
         Parameters
@@ -560,8 +730,7 @@ class _File(_Class):
         
         """
 
-        super().__init__(data, name, path, parent)
-
+        super().__init__(data, name, path, '', parent, '', level)
 
         self.package = self._get_package(data)
         self.imports = self._get_imports(data)
@@ -589,10 +758,13 @@ class _File(_Class):
         
         """
 
-        file_template = open(join('source', 'file_content_template.html'), 'r', 
-                             encoding='utf-8').read()
+        file_template = open(join('source', 'file_content_template.html'), 
+                             'r', encoding='utf-8').read()
 
-        imports = ['<li>import {}</li>'.format(i) for i in self.imports]
+        imports = []
+        for import_ in self.imports:
+            imports.append(('<li><b style="color: darkred;">'
+                            'import</b> {}</li>').format(import_))
 
         html = file_template.format(
             filename=self.name,
@@ -605,7 +777,7 @@ class _File(_Class):
 
     @staticmethod
     def _get_doc(data: str) -> str:
-        doc = search(r'([\s]+|)\/\*[\s\S]*?\*\/', data)
+        doc = search(r'^([\s]+|)\/\*[\s\S]*?\*\/', data)
         if doc:
             doc = doc.group(0).strip()
         else:
@@ -626,6 +798,72 @@ class _File(_Class):
         return imports
 
 
+class _Dir(_TreeElement):
+    """Класс який описує каталог коду
+    
+    """
+
+    def __init__(self, name: str, path: str, 
+                 parent: Optional['_TreeElement'] = None,
+                 level: int = 0):
+        
+        super().__init__(name, path, parent, level)
+
+        self.files: List[_File] = []
+        self.dirs: List['_Dir'] = []
+
+    def get_childs(self):
+        return self.dirs + self.files
+
+    def get_content(self):
+        html = '<h1>Каталог {}</h1>'.format(basename(self.name))
+        html += '<h3>Каталоги</h3>'
+        html += '<ul>'
+        for dir_ in self.dirs:
+            html += '<li><a href="{level}{link}">dir {name}</a></li>'.format(
+                name=dir_.name, 
+                link=dir_.path,
+                level='../' * self.level,
+            )
+        html += '</ul>'
+        html += '<h3>Файли</h3>'
+        html += '<ul>'
+        for file_ in self.files:
+            html += '<li><a href="{level}{link}">file {name}</a></li>'.format(
+                name=file_.name, 
+                link=file_.path,
+                level='../' * self.level,
+            )
+        html += '</ul>'
+        return html
+
+    def add_file(self, name: str, path: str, data: str):
+        for dir_ in self.dirs:
+            if path.__contains__(dir_.path.split('.')[0]):
+                dir_.add_file(name, path, data)
+                break
+        else:
+            self.files.append(_File(
+                data,
+                name,
+                path,
+                self,
+                self.level + 1,
+            ))
+
+    def add_dir(self, path: str, name: str, level: int = 0):
+        for dir_ in self.dirs:
+            if path.__contains__(dir_.path.split('.')[0]):
+                dir_.add_dir(path, name)
+                break
+        else:
+            self.dirs.append(_Dir(
+                name,
+                path,
+                self,
+                self.level + 1,
+            ))
+
 class DocMaker:
     """Головний клас модуля який опрацьовує та генерує документацію.
     
@@ -639,6 +877,8 @@ class DocMaker:
         Парсинг інформації з файлів каталогу та його підкаталогів.
     git : int
         Парсинг інформації з файлів git репозиторія.
+    _root_element : Optional[_TreeElement]
+        Корневий елемент дерева об'єктів
 
     Methods
     -------
@@ -710,11 +950,11 @@ class DocMaker:
 
         if method == doc_maker.file:
             doc_maker._parse_file(input_path)
-        elif method == doc_maker.file:
+        elif method == doc_maker.dir:
             doc_maker._parse_dir(input_path)
-        elif method == doc_maker.file:
+        elif method == doc_maker.recursive:
             doc_maker._parse_recursive(input_path)
-        elif method == doc_maker.file:
+        elif method == doc_maker.git:
             doc_maker._parse_git(input_path)
 
         doc_maker._write_doc(output_path)
@@ -755,7 +995,6 @@ class DocMaker:
                                        None,
             )
 
-
     def _parse_dir(self, path_to_dir: str):
         """Пошук файлів з каталогу
         
@@ -769,9 +1008,30 @@ class DocMaker:
         
         """
 
-        # TODO >1.0 Збір файлів з каталогу
-        pass
+        dir_ = _Dir(
+            basename(path_to_dir),
+            basename(path_to_dir) + '.html',
+        )
+        self._root_element = dir_
 
+        for object_ in listdir(path_to_dir):
+            if (isfile(join(path_to_dir, object_)) and 
+                object_.split('.')[1] == 'kt'):
+
+                doc_path = join(
+                    basename(path_to_dir), 
+                    object_.split('.')[0] + '.html',
+                )
+                with open(join(path_to_dir, object_), 
+                          'r', encoding='utf-8') as file:
+                    name = basename(join(path_to_dir, object_))
+                    self._root_element.add_file(
+                                            name,
+                                            doc_path,
+                                            file.read(),
+                    )
+
+        
     def _parse_recursive(self, path_to_dir: str):
         """Рекурсивний пошук файлів
         
@@ -785,8 +1045,50 @@ class DocMaker:
         
         """
 
-        # TODO >2.0 Збір файлів з каталогу
-        pass
+        dir_ = _Dir(
+            basename(path_to_dir),
+            basename(path_to_dir) + '.html',
+        )
+        self._root_element = dir_
+
+        path_to_delete, _ = split(path_to_dir)
+        for root, dirs, files in walk(path_to_dir):
+            relative_path = root.replace(path_to_delete, '')[1:]
+            for dir_ in dirs:
+                if dir_.__contains__('.'):
+                    continue
+                self._root_element.add_dir(
+                    join(relative_path, dir_ + '.html'), 
+                    dir_,
+                )
+            for file_ in files:
+                try:
+                    if file_.split('.')[1] != 'kt':
+                        continue
+                except IndexError:
+                    continue
+
+                with open(join(root, file_), 'r', encoding='utf-8') as file:
+                    self._root_element.add_file(
+                        file_,
+                        join(relative_path, file_.split('.')[0] + '.html'),
+                        file.read(),
+                    )
+        
+        # Видаляємо непотрібні каталоги
+        for object_ in self._root_element.get_all_childs():
+            if type(object_) is _Dir:
+                if not object_.get_childs():
+                    object_.parent.dirs.remove(object_)
+                elif len(object_.get_childs()) == 1:
+                    dir_ = object_.get_childs()[0]
+                    if type(dir_) is not _Dir:
+                        continue
+                    
+                    if object_.parent:
+                        object_.parent.dirs.remove(object_)
+                        object_.parent.dirs.append(dir_)
+                        dir_.name = join(object_.name, dir_.name)
 
     def _parse_git(self, path_to_git: str):
         """Обробка git репозиторія
@@ -802,8 +1104,13 @@ class DocMaker:
         
         """
 
-        # TODO >3.0 Збір файлів з git репозиторія
-        pass
+        name = basename(path_to_git).split('.')[0]
+
+        system('git clone {}'.format(path_to_git))
+
+        self._parse_recursive(name)
+        
+        rmtree(name, onerror=remove_error)
 
     def _write_doc(self, path_to_dir: str):
         """Генерує зібрану інформацію у HTML форматі.
@@ -815,11 +1122,18 @@ class DocMaker:
         
         """
 
+        if not path_to_dir:
+            path_to_dir = 'documentions'
+
+        name = self._root_element.name.split('.')[0]
+        path_to_dir = join(path_to_dir, name)
+
         # Перевірка на існування кінцевого каталогу, та предостереження юзера
         if exists(path_to_dir):
             while True:
                 print(('Такий каталог "{}" вже існує, якщо продовжити' 
-                      '- вся інформація в ньому буде знищена').format(path_to_dir))
+                      '- вся інформація в ньому буде знищена'
+                      ).format(path_to_dir))
                 command = input('Продовжити? [Y(продовжити)\\N(відмінити)]'
                                 ' - оберіть команду: ')
                 if command.lower() == 'y':
@@ -847,28 +1161,68 @@ class DocMaker:
             version=__version__,
         )
 
+        index_content = """
+        <div class="row d-flex align-self-center">
+            <div class="col-12">
+                <h1>{project_name}</h1>
+                <h1>Згенеровано {date}</h1>
+                <h1>Завдяки DocMaker {version}</h1>
+            </div>
+        </div>""".format(
+            project_name=self._root_element.name,
+            date=datetime.now().strftime('%d.%m.%Y %H:%M'),
+            version=__version__,
+        )
         
         with open(join(path_to_dir, 'index.html'), 'w', 
                   encoding='utf-8') as file:
             file.write(page_template.format(
-                page_content='',
-                tree=self._root_element.get_tree_from_root(),
+                level='',
+                page_content=index_content,
+                tree=self._root_element.get_tree_from_root(0),
+                alphabet=self._root_element.get_alphabetical_index(),
             ))
 
-        for object_ in [self._root_element] + self._root_element.get_childs():
+        for object_ in self._root_element.get_all_childs():
 
-            if type(object_) is _File:
-                makedirs(join(path_to_dir, dirname(object_.path)), 
-                         exist_ok=True)
+            if type(object_) is _File or type(object_) is _Dir:
+                try:
+                    makedirs(join(path_to_dir, dirname(object_.path)), 
+                            exist_ok=True)
+                except FileExistsError:
+                    pass
 
                 with open(join(path_to_dir, object_.path), 'w', 
                           encoding='utf-8') as file:
-                    file.write(
-                        page_template.format(
-                            page_content=object_.get_content(),
-                            tree=self._root_element.get_tree_from_root(),
-                        ) 
+                    re = self._root_element
+                    html = page_template.format(
+                        level='../' * object_.level,
+                        page_content=object_.get_content(),
+                        tree=re.get_tree_from_root(object_.level),
+                        alphabet=re.get_alphabetical_index(object_.level),
                     )
+                    html = self.get_style(html)
+                    file.write(html)
+
+    @staticmethod
+    def get_style(html: str) -> str:
+        """Добавляє стилі по відведеним крітеріям в HTML"""
+
+        html = sub(
+            (
+                r'(?<!\w)'
+                r'(class|fun|override|inner|var|dir|file|val|open)'
+                r'(?!=\w|\=)'
+            ),
+                '<b style="color: darkred;">\g<1></b>',
+                html,
+        )
+        html = sub(
+            r'(Опис відсутній)',
+            '<small style="color: lightgray;">\g<1></small>',
+            html,
+        )
+        return html
 
 
 if __name__ == "__main__":

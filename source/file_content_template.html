@@ -1,21 +1,28 @@
 <div class="container-fluid">
     <div class="row">
         <div class="container-fluid">
-            <h2>Опис файлу {filename}</h2>
+            <h2>{filename}</h2>
             <p>{doc}</p>
         </div>
     </div>
     <div class="row">
-        <h5><b>package</b> {package}</h5>
+        <div class="container-fluid">
+            <h5><b style="color: darkred;">package</b> {package}</h5>
+        </div>
     </div>
     <div class="row">
-        <ul>
-            {imports}
-        </ul>
+        <div class="container-fluid">
+            <h5>Імпорти файлу: </h5>
+            <ul>
+                {imports}
+            </ul>
+        </div>
     </div>
     <div class="row">
-        <ul>
-            {content}
-        </ul>
+        <div class="container-fluid">
+            <ul style="padding: 0px; margin: 0px;">
+                {content}
+            </ul>
+        </div>
     </div>
 </div>
